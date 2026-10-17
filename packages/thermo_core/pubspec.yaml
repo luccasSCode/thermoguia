@@ -1,0 +1,10 @@
+name: thermo_core
+description: Núcleo de domínio do ThermoGuia (agente térmico), em Dart puro. Compartilhado entre app e backend.
+version: 1.0.0
+publish_to: none
+
+environment:
+  sdk: '>=3.5.0 <4.0.0'
+
+dev_dependencies:
+  test: ^1.25.8

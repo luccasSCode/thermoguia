@@ -1,0 +1,6 @@
+**/.dart_tool
+**/build
+backend/.env
+backend/cache
+app
+docs

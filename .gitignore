@@ -1,0 +1,18 @@
+# Dart / Flutter
+.dart_tool/
+.packages
+build/
+pubspec.lock
+.flutter-plugins
+.flutter-plugins-dependencies
+*.iml
+.idea/
+.vscode/
+
+# Backend
+backend/.env
+backend/cache/
+
+# Plataformas geradas por tool/setup_platforms.dart
+app/android/
+app/ios/

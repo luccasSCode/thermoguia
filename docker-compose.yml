@@ -1,0 +1,30 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: thermoguia
+      POSTGRES_USER: thermoguia
+      POSTGRES_PASSWORD: thermoguia
+    ports: ["5432:5432"]
+    volumes: [dbdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U thermoguia"]
+      interval: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    env_file: backend/.env
+    environment:
+      DB_HOST: db
+    ports: ["${API_PORT:-8080}:8080"]
+    volumes: [apicache:/app/cache]
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  dbdata:
+  apicache:
