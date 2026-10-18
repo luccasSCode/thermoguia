@@ -10,6 +10,8 @@ import '../../core/widgets/common.dart';
 import '../../core/widgets/heat_band.dart';
 import '../../core/widgets/thermo_logo.dart';
 import '../adaptive/adaptive_controller.dart';
+import '../air/air_card.dart';
+import '../air/air_providers.dart';
 import '../climate/climate_providers.dart';
 import '../hydration/hydration_controller.dart';
 import '../outdoor/outdoor_session_controller.dart';
@@ -46,7 +48,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         child: RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(briefingProvider);
-            await ref.read(climateProvider.notifier).refresh();
+            await Future.wait([
+              ref.read(climateProvider.notifier).refresh(),
+              ref.read(airProvider.notifier).refresh(),
+            ]);
           },
           child: climate.when(
             skipLoadingOnRefresh: true,
@@ -64,6 +69,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   const _Notice(icon: Icons.history, text: 'Sem conexão: mostrando os últimos dados salvos.'),
                 const _LocationNotice(),
                 _Hero(climate: c.current),
+                const AirQualityCard(),
                 const _Shortcuts(),
                 const _BriefingBlock(),
                 const _OutdoorBlock(),
@@ -117,6 +123,7 @@ class _TopBar extends ConsumerWidget {
             onPressed: () {
               ref.invalidate(briefingProvider);
               ref.read(climateProvider.notifier).refresh();
+              ref.read(airProvider.notifier).refresh();
             },
           ),
         ],

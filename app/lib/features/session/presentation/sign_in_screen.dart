@@ -95,7 +95,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 const SizedBox(height: 24),
                 Text('Seu perfil de deslocamento', style: t.titleMedium),
                 const SizedBox(height: 12),
-                PersonaPicker(value: _persona, onChanged: (p) => setState(() => _persona = p)),
+                PersonaPicker(value: _persona, showBenefits: true, onChanged: (p) => setState(() => _persona = p)),
               ],
               const SizedBox(height: 32),
               FilledButton(

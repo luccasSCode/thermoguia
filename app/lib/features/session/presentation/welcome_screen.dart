@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/widgets/animated_thermo_logo.dart';
+import '../../../core/widgets/common.dart';
+import '../../../core/widgets/leaf_animation.dart';
+import 'social_sign_in.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -44,8 +46,8 @@ class WelcomeScreen extends StatelessWidget {
                               label: 'Thermo Guia',
                               child: ExcludeSemantics(
                                 child: Row(children: [
-                                  AnimatedThermoLogo.mark(size: (t.displaySmall?.fontSize ?? 36) * 1.5),
-                                  const SizedBox(width: 10),
+                                  LeafAnimation(size: (t.displaySmall?.fontSize ?? 36) * 2),
+                                  const SizedBox(width: 4),
                                   Expanded(child: Text('Thermo Guia', style: t.displaySmall)),
                                 ]),
                               ),
@@ -73,6 +75,24 @@ class WelcomeScreen extends StatelessWidget {
                             OutlinedButton(
                               onPressed: () => context.go('/entrar'),
                               child: const Center(child: Text('Já tenho conta')),
+                            ),
+                            const SizedBox(height: 20),
+                            Row(children: [
+                              const Expanded(child: Divider()),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                child: Text('ou', style: t.bodyMedium),
+                              ),
+                              const Expanded(child: Divider()),
+                            ]),
+                            const SizedBox(height: 20),
+                            // Os SDKs de login social ainda não estão configurados: o toque explica isso.
+                            SocialSignInButtons(
+                              onPressed: (p) => showMessage(
+                                context,
+                                'O login com ${p.brand} chega em breve. Por enquanto, toque em '
+                                '"Começar" ou entre com seu e-mail.',
+                              ),
                             ),
                             const Spacer(flex: 2),
                           ],

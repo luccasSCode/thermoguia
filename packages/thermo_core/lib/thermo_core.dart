@@ -13,3 +13,4 @@ export 'src/adaptive_profile.dart';
 export 'src/sun_position.dart';
 export 'src/geo.dart';
 export 'src/navigation.dart';
+export 'src/air_quality.dart';

@@ -4,6 +4,7 @@ import 'cities.dart';
 import 'config.dart';
 import 'data/db.dart';
 import 'data/repositories.dart';
+import 'services/air_quality_service.dart';
 import 'services/assistant_service.dart';
 import 'services/auth_service.dart';
 import 'services/claude_service.dart';
@@ -38,6 +39,7 @@ class AppDeps {
   late final social = SocialService(socialRepo, verification, rewards, users);
 
   late final weather = OpenMeteoService(client);
+  late final air = AirQualityService(client);
   late final geocoding = GeocodingService(config, client);
   late final claude = ClaudeService(config, client);
 

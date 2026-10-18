@@ -18,6 +18,11 @@ const planCatalog = {
       'name': 'Grátis',
       'price': 'R\$ 0',
       'tagline': 'Tudo o que protege você do calor',
+      'highlights': [
+        'Risco de calor e alertas de fumaça',
+        'Rotas Frescas sem limite',
+        'Lembretes de água e botão de emergência',
+      ],
     },
     {
       'id': 'plus',
@@ -26,12 +31,18 @@ const planCatalog = {
       'priceYear': 'R\$ 79,90/ano',
       'yearNote': 'equivale a R\$ 6,66/mês',
       'tagline': 'Sem limites, no pulso e com a família',
+      'highlights': [
+        'Assistente sem limite de perguntas',
+        'Gotas em dobro e cupons de até 25%',
+        'Família, relógio e mapas offline',
+      ],
     },
   ],
   'alwaysFree': [
     {'icon': 'thermostat', 'title': 'Risco térmico em tempo real, feito para o seu perfil'},
     {'icon': 'navigation', 'title': 'Rotas Frescas com navegação por voz, sem limite de trajetos'},
     {'icon': 'water', 'title': 'Lembretes de água conforme o calor'},
+    {'icon': 'air', 'title': 'Qualidade do ar e alertas de fumaça, com a Hora Segura para sair'},
     {'icon': 'emergency', 'title': 'Botão "Estou passando mal" e contatos de emergência'},
     {'icon': 'sun', 'title': 'Modo Sol Forte para ler a tela na rua'},
   ],
@@ -144,6 +155,12 @@ const planCatalog = {
     'id': 'empresas',
     'name': 'ThermoGuia Empresas',
     'price': 'Sob consulta',
+    'tagline': 'Para equipes que trabalham na rua',
+    'highlights': [
+      'Painel de calor e fumaça da equipe',
+      'Pausas automáticas e alerta ao supervisor',
+      'Relatórios para NR-15 e NR-21',
+    ],
     'features': [
       'Painel de segurança térmica da equipe',
       'Smartwatches da equipe sem limite, com alerta ao supervisor',

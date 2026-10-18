@@ -5,10 +5,13 @@
 //
 // O que faz:
 //  1. flutter create (gera android/ e ios/ se ainda não existirem)
-//  2. copia o AndroidManifest com as permissões do ThermoGuia
+//  2. copia o AndroidManifest (permissões e os três ícones), a MainActivity
+//     que troca o ícone e os ícones alternativos (platform/android)
 //  3. habilita o "desugaring" exigido pelas notificações locais
 //  4. adiciona as descrições de permissão no Info.plist do iOS
-//  5. gera os ícones (logo) e a tela de abertura
+//  5. gera os ícones (com as variantes Escuro e Tingido) e a tela de abertura
+//
+// Mudou o desenho do ícone? Antes, rode: flutter test tool/render_brand_assets.dart
 import 'dart:io';
 
 Future<void> main() async {
@@ -20,6 +23,10 @@ Future<void> main() async {
   File('platform/android/AndroidManifest.xml')
       .copySync('android/app/src/main/AndroidManifest.xml');
   stdout.writeln('✓ AndroidManifest com permissões de localização e notificação');
+  File('platform/android/MainActivity.kt')
+      .copySync('android/app/src/main/kotlin/br/com/thermoguia/thermoguia/MainActivity.kt');
+  _copyDir(Directory('platform/android/res'), Directory('android/app/src/main/res'));
+  stdout.writeln('✓ Ícones alternativos do Android (Escuro e Tingido)');
 
   _patchGradle();
   _patchInfoPlist();
@@ -28,6 +35,14 @@ Future<void> main() async {
   await _run('dart', ['run', 'flutter_launcher_icons']);
   await _run('dart', ['run', 'flutter_native_splash:create']);
   stdout.writeln('\nPronto. Rode: flutter run --dart-define=API_URL=http://10.0.2.2:8080');
+}
+
+void _copyDir(Directory from, Directory to) {
+  for (final f in from.listSync(recursive: true).whereType<File>()) {
+    final rel = f.path.substring(from.path.length + 1);
+    final dest = File('${to.path}/$rel')..parent.createSync(recursive: true);
+    f.copySync(dest.path);
+  }
 }
 
 Future<void> _run(String cmd, List<String> args) async {

@@ -85,7 +85,9 @@ final authRepositoryProvider = Provider(
 
 final sessionProvider = ChangeNotifierProvider<SessionController>((ref) {
   final controller = SessionController(ref.watch(authRepositoryProvider));
-  ref.read(apiClientProvider).onUnauthorized = controller.handleUnauthorized;
+  ref.read(apiClientProvider)
+    ..onUnauthorized = controller.handleUnauthorized
+    ..warmUp();
   controller.restore();
   return controller;
 });

@@ -114,11 +114,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         Text('Como você costuma andar pela cidade?', style: t.headlineSmall),
         const SizedBox(height: 8),
         Text(
-          'Isso ajusta o cálculo de risco e os lembretes de água ao seu esforço.',
+          'Cada perfil muda o cálculo de risco, a meta de água e os alertas. Toque em um para ver.',
           style: t.bodyMedium,
         ),
         const SizedBox(height: 16),
-        PersonaPicker(value: _persona, onChanged: (p) => setState(() => _persona = p)),
+        PersonaPicker(value: _persona, showBenefits: true, onChanged: (p) => setState(() => _persona = p)),
         const SizedBox(height: 40),
         FilledButton(onPressed: () => setState(() => _step = 1), child: const Text('Continuar')),
       ];

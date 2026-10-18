@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/air/air_providers.dart';
 import '../../features/climate/climate_providers.dart';
 import '../../features/notifications/engagement.dart';
 import '../../features/rewards/rewards_controller.dart';
@@ -64,6 +65,10 @@ class _HomeShellState extends ConsumerState<HomeShell> with WidgetsBindingObserv
     // Previsão nova = textos novos nas notificações da semana.
     ref.listen(climateProvider.select((c) => c.valueOrNull?.fetchedAt), (_, __) {
       ref.read(engagementSchedulerProvider)();
+    });
+    // Ar novo = alerta de fumaça (se mudou) e avisos programados refeitos.
+    ref.listen(airProvider.select((a) => a.valueOrNull?.fetchedAt), (_, __) {
+      ref.read(airUpdatedProvider)();
     });
     ref.listen(rewardEventProvider, (_, e) {
       if (e == null) return;

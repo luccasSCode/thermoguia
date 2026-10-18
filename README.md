@@ -72,16 +72,25 @@ cd app && flutter test                 # widgets
 
 ## Logo e ícones
 
+O ícone é desenhado em vetor em `app/lib/core/widgets/leaf_icon.dart`, e o mesmo
+desenho anima a abertura do app. Os PNGs de `app/assets/branding/` saem dele:
+
 | Arquivo | Uso |
 |---|---|
-| `app_icon.png` | Ícone do app no iOS, Android antigo e lojas |
-| `app_icon_foreground.png`, `app_icon_background.png` | Ícone adaptativo do Android: folha na zona segura sobre o gradiente |
+| `app_icon.png`, `app_icon_dark.png`, `app_icon_tinted.png` | Ícone do iOS nas variantes Padrão, Escuro e Tingido (iOS 18 troca sozinho) |
+| `app_icon_foreground.png`, `app_icon_background.png` | Ícone adaptativo do Android: folha na zona segura sobre o degradê |
+| `app_icon_monochrome.png` | Ícone temático do Android 13+ |
+| `app/platform/android/res/` | Variantes Escuro e Tingido do Android, escolhidas em Perfil → Ícone do app |
 | `store_icon_512.png` | Ícone da ficha da Google Play (512×512) |
-| `splash_logo.png`, `splash_android12.png` | Tela de abertura |
-| `logo.png` | Logo dentro do app (boas-vindas, topo da tela inicial) |
+| `logo.png` | Logo dentro do app (topo da tela inicial e carregamento) |
+| `splash_blank.png` | Tela de abertura nativa vazia; a animação da folha vem logo depois |
 
-Para trocar a logo, substitua os arquivos e rode `dart run flutter_launcher_icons` e
-`dart run flutter_native_splash:create`.
+Para mudar o ícone, edite o desenho e rode, dentro de `app`:
+
+```bash
+flutter test tool/render_brand_assets.dart
+dart run tool/setup_platforms.dart
+```
 
 ## Antes de publicar nas lojas
 

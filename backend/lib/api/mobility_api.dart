@@ -30,6 +30,12 @@ void registerMobilityRoutes(Router r, AppDeps d) {
     });
   });
 
+  /// Qualidade do ar (PM2.5 e PM10) de agora e das próximas 72 horas.
+  r.get('/air', (Request req) async {
+    final bundle = await d.air.fetch(qDouble(req, 'lat'), qDouble(req, 'lng'));
+    return jsonResponse(bundle.toJson());
+  });
+
   r.post('/routes/fresh', (Request req) async {
     final b = await readJson(req);
     final city = await _cityOf(d, req);

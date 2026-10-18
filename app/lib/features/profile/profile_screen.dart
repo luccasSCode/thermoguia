@@ -7,8 +7,10 @@ import '../../core/providers.dart';
 import '../../core/theme/theme_mode.dart';
 import '../../core/widgets/common.dart';
 import '../adaptive/adaptive_controller.dart';
+import '../air/air_providers.dart';
 import '../adaptive/sun_mode.dart';
 import '../notifications/engagement.dart';
+import 'app_icon_setting.dart';
 import 'avatar.dart';
 import '../session/presentation/persona_picker.dart';
 import '../session/presentation/session_controller.dart';
@@ -136,6 +138,13 @@ class ProfileScreen extends ConsumerWidget {
             ),
           ),
           const SectionTitle('Notificações'),
+          SwitchListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+            title: const Text('Alertas de fumaça e qualidade do ar'),
+            subtitle: const Text('Quando usar máscara, fechar as janelas e quando o ar fica bom para sair'),
+            value: ref.watch(airAlertsSettingProvider),
+            onChanged: (on) => ref.read(airAlertsSettingProvider.notifier).set(on),
+          ),
           for (final e in Engagement.values)
             SwitchListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 20),
@@ -148,6 +157,7 @@ class ProfileScreen extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
             child: Text(
               'As notificações programadas nunca chegam entre 19h30 e 6h30, e são no máximo 4 por dia. '
+              'Os alertas de fumaça são urgentes e podem chegar das 6h às 22h. '
               'Os lembretes de água continuam quando você liga "Estou na rua agora".',
               style: t.bodySmall,
             ),
@@ -178,6 +188,8 @@ class ProfileScreen extends ConsumerWidget {
               ],
             ),
           ),
+          const SectionTitle('Ícone do app'),
+          const AppIconPicker(),
           const SectionTitle('Modo Sol Forte'),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),

@@ -45,11 +45,19 @@ void main() {
 
       // Rola a tela inteira; qualquer estouro de layout falha o teste.
       final list = find.byType(Scrollable).first;
+      // Cada plano mostra o resumo curto (aqui, o padrão do app: a fixture não tem `highlights`).
+      for (final text in ['Rotas Frescas sem limite', 'Assistente sem limite de perguntas', 'Falar com a equipe']) {
+        await tester.scrollUntilVisible(find.text(text), 250, scrollable: list);
+        expect(find.text(text), findsOneWidget);
+      }
+      // A comparação completa fica recolhida até a pessoa pedir.
+      expect(find.text('Grátis: 1 relógio: alertas de risco e lembretes de água'), findsNothing);
+      await tester.scrollUntilVisible(find.text('Comparar todos os recursos'), 250, scrollable: list);
+      await tester.tap(find.text('Comparar todos os recursos'));
+      await tester.pumpAndSettle();
       for (final text in [
-        'Grátis × ThermoGuia+',
-        'Sincronizar com smartwatch',
-        '1 relógio: alertas de risco e lembretes de água',
-        'Falar com a equipe',
+        'Sincronizar com smartwatch (em breve)',
+        'Grátis: 1 relógio: alertas de risco e lembretes de água',
       ]) {
         await tester.scrollUntilVisible(find.text(text), 250, scrollable: list);
         expect(find.text(text), findsOneWidget);

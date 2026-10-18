@@ -24,6 +24,16 @@ abstract final class Tokens {
         RiskLevel.extremo => sunMode ? const Color(0xFF6E0F0B) : const Color(0xFFA8231F),
       };
 
+  /// Faixas do IQAr: verde, amarelo, laranja, vermelho e roxo, como nos
+  /// boletins oficiais de qualidade do ar.
+  static Color air(AirLevel l, {bool sunMode = false}) => switch (l) {
+        AirLevel.boa => sunMode ? const Color(0xFF145C3B) : copa,
+        AirLevel.moderada => sunMode ? const Color(0xFF7A5C00) : const Color(0xFFC79A1E),
+        AirLevel.ruim => sunMode ? const Color(0xFF9A4A00) : sol,
+        AirLevel.muitoRuim => sunMode ? const Color(0xFF8E2A0E) : const Color(0xFFD9542B),
+        AirLevel.pessima => sunMode ? const Color(0xFF4F1468) : const Color(0xFF8E3FAE),
+      };
+
   /// Cor de um trecho de rota conforme a sombra (0–1).
   static Color shade(double s) => s >= 0.55
       ? copa

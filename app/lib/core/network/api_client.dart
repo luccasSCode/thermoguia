@@ -20,8 +20,9 @@ class ApiClient {
   ApiClient(this._store)
       : _dio = Dio(BaseOptions(
           baseUrl: AppConfig.apiUrl,
-          connectTimeout: const Duration(seconds: 10),
-          receiveTimeout: const Duration(seconds: 50),
+          connectTimeout: const Duration(seconds: 15),
+          // No plano gratuito do Render, o servidor parado leva até ~1 min para acordar.
+          receiveTimeout: const Duration(seconds: 90),
           contentType: 'application/json',
         )) {
     _dio.interceptors.add(InterceptorsWrapper(onRequest: (options, handler) {
@@ -36,6 +37,10 @@ class ApiClient {
 
   /// Chamado quando o servidor recusa a sessão (401).
   void Function()? onUnauthorized;
+
+  /// Acorda o servidor assim que o app abre, sem esperar resposta: quando a
+  /// pessoa terminar a abertura e o cadastro, ele já está pronto.
+  void warmUp() => _dio.get('/health').ignore();
 
   Future<dynamic> get(String path, {Map<String, dynamic>? query}) =>
       _wrap(() => _dio.get(path, queryParameters: query));
@@ -69,7 +74,7 @@ class ApiClient {
           DioExceptionType.connectionTimeout ||
           DioExceptionType.receiveTimeout ||
           DioExceptionType.sendTimeout =>
-            'O servidor do ThermoGuia demorou para responder. Tente de novo em instantes.',
+            'O servidor do ThermoGuia está acordando (pode levar até 1 minuto). Tente de novo em instantes.',
           _ => 'Não foi possível falar com o servidor do ThermoGuia. '
               'Confira sua internet ou tente de novo em instantes.',
         });

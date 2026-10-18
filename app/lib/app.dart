@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_mode.dart';
+import 'core/widgets/leaf_animation.dart';
 import 'features/adaptive/sun_mode.dart';
 
 class ThermoGuiaApp extends ConsumerWidget {
@@ -30,12 +31,15 @@ class ThermoGuiaApp extends ConsumerWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
+      // A abertura animada fica por fora, para não recomeçar quando o Modo Sol muda.
       builder: (context, child) {
-        if (!sunMode) return child!;
+        if (!sunMode) return AnimatedSplash(child: child!);
         // Texto maior no sol, respeitando quem já usa fonte grande.
         final mq = MediaQuery.of(context);
         final scale = (mq.textScaler.scale(16) / 16 * 1.18).clamp(1.18, 1.6);
-        return MediaQuery(data: mq.copyWith(textScaler: TextScaler.linear(scale)), child: child!);
+        return AnimatedSplash(
+          child: MediaQuery(data: mq.copyWith(textScaler: TextScaler.linear(scale)), child: child!),
+        );
       },
     );
   }

@@ -67,8 +67,16 @@ class NotificationService {
   Future<void> heatAlert(String title, String body) =>
       _show(2, title, body, 'alertas', 'Alertas de calor');
 
+  /// Fumaça agora (ou o ar que acabou de melhorar). Abre o card do ar na tela Agora.
+  Future<void> airAlert(String title, String body) =>
+      _show(3, title, body, _airChannel, _airChannelName, route: '/agora', bigText: true);
+
+  static const _airChannel = 'qualidade_ar';
+  static const _airChannelName = 'Qualidade do ar e fumaça';
+
   /// Programa uma notificação para [at] (horário local do aparelho).
-  Future<void> schedule(int id, DateTime at, String title, String body, {required String route}) async {
+  /// [air] usa o canal urgente de qualidade do ar em vez do resumo do dia.
+  Future<void> schedule(int id, DateTime at, String title, String body, {required String route, bool air = false}) async {
     try {
       await init();
       await _plugin.zonedSchedule(
@@ -76,15 +84,27 @@ class NotificationService {
         title,
         body,
         tz.TZDateTime.from(at, tz.local),
-        const NotificationDetails(
-          android: AndroidNotificationDetails(
-            'dia',
-            'Resumo do dia e Clube H2O',
-            channelDescription: 'Resumo da manhã, aviso do pico de calor, janela fresca e Clube H2O',
-            importance: Importance.defaultImportance,
-          ),
-          iOS: DarwinNotificationDetails(),
-        ),
+        air
+            ? NotificationDetails(
+                android: AndroidNotificationDetails(
+                  _airChannel,
+                  _airChannelName,
+                  channelDescription: 'Avisos de fumaça, quando usar máscara e quando o ar fica bom para sair',
+                  importance: Importance.max,
+                  priority: Priority.max,
+                  styleInformation: BigTextStyleInformation(body),
+                ),
+                iOS: const DarwinNotificationDetails(interruptionLevel: InterruptionLevel.timeSensitive),
+              )
+            : const NotificationDetails(
+                android: AndroidNotificationDetails(
+                  'dia',
+                  'Resumo do dia e Clube H2O',
+                  channelDescription: 'Resumo da manhã, aviso do pico de calor, janela fresca e Clube H2O',
+                  importance: Importance.defaultImportance,
+                ),
+                iOS: DarwinNotificationDetails(),
+              ),
         // Sem alarme exato: não exige permissão extra e poupa bateria.
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
@@ -106,7 +126,8 @@ class NotificationService {
     } catch (_) {}
   }
 
-  Future<void> _show(int id, String title, String body, String channel, String channelName) async {
+  Future<void> _show(int id, String title, String body, String channel, String channelName,
+      {String? route, bool bigText = false}) async {
     try {
       await init();
       await _plugin.show(
@@ -117,11 +138,13 @@ class NotificationService {
           android: AndroidNotificationDetails(
             channel,
             channelName,
-            importance: Importance.high,
-            priority: Priority.high,
+            importance: bigText ? Importance.max : Importance.high,
+            priority: bigText ? Priority.max : Priority.high,
+            styleInformation: bigText ? BigTextStyleInformation(body) : null,
           ),
-          iOS: const DarwinNotificationDetails(),
+          iOS: DarwinNotificationDetails(interruptionLevel: bigText ? InterruptionLevel.timeSensitive : null),
         ),
+        payload: route,
       );
     } catch (_) {
       // Notificação é complementar; falhas não podem derrubar o fluxo.

@@ -30,6 +30,7 @@ dependencies:
   flutter_timezone: ^5.1.1
   timezone: ^0.10.1
   image_picker: ^1.2.4
+  flutter_svg: ^2.0.9
 
 dev_dependencies:
   flutter_test:
@@ -44,25 +45,33 @@ flutter:
     - assets/branding/
     - assets/illustrations/
 
-# Ícones do app (lojas e tela inicial do aparelho): dart run flutter_launcher_icons
+# Ícones do app (lojas e tela inicial do aparelho). Os PNGs saem do desenho
+# vetorial: flutter test tool/render_brand_assets.dart && dart run flutter_launcher_icons
+# iOS 18: variantes Escuro e Tingido automáticas. Android 13+: ícone temático
+# (monocromático); Escuro e Tingido também podem ser escolhidos no Perfil.
 flutter_launcher_icons:
   android: "ic_launcher"
   ios: true
   image_path: "assets/branding/app_icon.png"
+  image_path_ios_dark_transparent: "assets/branding/app_icon_dark.png"
+  image_path_ios_tinted_grayscale: "assets/branding/app_icon_tinted.png"
+  desaturate_tinted_to_grayscale_ios: true
   remove_alpha_ios: true
   adaptive_icon_background: "assets/branding/app_icon_background.png"
   adaptive_icon_foreground: "assets/branding/app_icon_foreground.png"
+  adaptive_icon_monochrome: "assets/branding/app_icon_monochrome.png"
   min_sdk_android: 21
 
 # Tela de abertura nativa: dart run flutter_native_splash:create
+# Fica vazia, só com a cor de fundo: a animação da folha (AnimatedSplash)
+# começa no primeiro quadro do app. No Android 12+, a imagem transparente
+# evita que o sistema mostre o ícone antes da animação.
 flutter_native_splash:
   color: "#FFFFFF"
-  image: assets/branding/splash_logo.png
   color_dark: "#0F1A24"
-  image_dark: assets/branding/splash_logo_dark.png
   android_12:
     color: "#FFFFFF"
-    image: assets/branding/splash_android12.png
+    image: assets/branding/splash_blank.png
     color_dark: "#0F1A24"
-    image_dark: assets/branding/splash_android12_dark.png
+    image_dark: assets/branding/splash_blank.png
   fullscreen: false

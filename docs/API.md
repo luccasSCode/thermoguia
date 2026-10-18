@@ -34,6 +34,7 @@ Rotas marcadas com 🔒 exigem `Authorization: Bearer <token>`.
 | Método | Rota | Descrição |
 |---|---|---|
 | GET | `/climate?lat&lng` | `{current, hourly, sun}` (horários em UTC) |
+| GET | `/air?lat&lng` | `{current, hourly}` com `pm25` e `pm10` em µg/m³ (UTC, 72 h). O app calcula o índice CONAMA, a Hora Segura e os alertas de fumaça |
 | POST | `/routes/fresh` | Ver abaixo |
 | GET | `/geo/search?q=` | Busca de endereços na cidade |
 | GET | `/places/oasis?lat&lng&limit` | Pontos de refresco próximos |

@@ -16,3 +16,12 @@ backend/cache/
 # Plataformas geradas por tool/setup_platforms.dart
 app/android/
 app/ios/
+app/macos/
+
+# Segredos
+.env
+.env.*
+!.env.example
+*.jks
+*.keystore
+key.properties
