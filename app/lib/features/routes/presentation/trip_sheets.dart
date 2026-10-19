@@ -101,6 +101,7 @@ IconData reportIcon(ReportKind k) => switch (k) {
       ReportKind.semSombra => Icons.wb_sunny,
       ReportKind.bebedouro => Icons.water_drop,
       ReportKind.calorExtremo => Icons.local_fire_department,
+      ReportKind.fumaca => Icons.air,
       ReportKind.alagamento => Icons.flood,
       ReportKind.transito => Icons.traffic,
       ReportKind.obra => Icons.construction,

@@ -43,6 +43,13 @@ class AirRepository {
     }
   }
 
+  /// Ar de agora num ponto qualquer (como o destino de uma rota), sem mexer no
+  /// cache do card de ar do usuário.
+  Future<AirPoint> currentAt(GeoPoint at) async {
+    final raw = (await _api.get('/air', query: {'lat': at.lat, 'lng': at.lng}) as Map).cast<String, dynamic>();
+    return AirPoint.fromJson((raw['current'] as Map).cast<String, dynamic>());
+  }
+
   AirData _parse(Map<String, dynamic> raw, DateTime fetchedAt, {required bool stale}) {
     final hourly = (raw['hourly'] as List)
         .map((h) => AirPoint.fromJson((h as Map).cast<String, dynamic>()))

@@ -192,6 +192,7 @@ class ReportRepo {
     'alagamento': Duration(hours: 12),
     'transito': Duration(hours: 2),
     'obra': Duration(days: 14),
+    'fumaca': Duration(hours: 4),
   };
 
   Future<Map<String, dynamic>> add(String userId, String kind, double lat, double lng, String note) async =>

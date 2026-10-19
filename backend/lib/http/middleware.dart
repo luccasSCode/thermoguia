@@ -33,7 +33,13 @@ const _publicPaths = {'health', 'cities', 'plans', 'plans/compare'};
 Middleware authGuard(AuthService auth) => (inner) => (req) {
       final path = req.url.path;
       // admin/ tem chave própria (ADMIN_TOKEN), conferida nas rotas.
-      if (_publicPaths.contains(path) || path.startsWith('auth/') || path.startsWith('admin/')) return inner(req);
+      // acompanhar/ é a página do responsável: o token secreto do link é a chave.
+      if (_publicPaths.contains(path) ||
+          path.startsWith('auth/') ||
+          path.startsWith('admin/') ||
+          path.startsWith('acompanhar/')) {
+        return inner(req);
+      }
       final header = req.headers['authorization'];
       if (header == null || !header.startsWith('Bearer ')) {
         throw ApiError(401, 'Sessão expirada. Entre novamente.');

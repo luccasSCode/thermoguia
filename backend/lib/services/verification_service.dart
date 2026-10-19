@@ -28,7 +28,17 @@ const postCategories = [
   PostCategory('guarda_sol', 'Guarda-sol', '+ Usou guarda-sol',
       'uma pessoa segurando um guarda-sol ou guarda-chuva aberto para se proteger do sol, ao ar livre'),
   PostCategory('oculos', 'Óculos de sol', '+ Usou óculos de sol', 'uma pessoa usando óculos de sol no rosto'),
+  PostCategory('mascara', 'Máscara na fumaça', '+ Usou máscara',
+      'uma pessoa usando máscara de proteção cobrindo o nariz e a boca (máscara no queixo, na mão ou pendurada não vale)'),
+  PostCategory('sombra', 'Caminho pela sombra', '+ Andou na sombra',
+      'uma pessoa ao ar livre protegida na sombra de árvores, toldo ou marquise, com a sombra visível'),
+  PostCategory('app_aberto', 'App aberto hoje', '+ Abriu o ThermoGuia',
+      'uma captura de tela (print) do celular com o aplicativo ThermoGuia aberto em tela inteira e a barra de '
+          'status do sistema (hora e bateria) visível no topo'),
 ];
+
+/// Categorias em que a imagem é um print da tela, e não uma foto da câmera.
+const screenshotCategories = {'app_aberto'};
 
 PostCategory? categoryById(String id) => postCategories.where((c) => c.id == id).firstOrNull;
 
@@ -55,7 +65,8 @@ class VerificationService {
   static const _system = '''
 Você verifica fotos do ThermoGuia, um app de proteção contra o calor em Manaus.
 Pessoas enviam fotos para comprovar hábitos (beber água, usar boné, protetor solar,
-guarda-sol, óculos de sol) e ganham pontos trocados por descontos. Por isso há
+guarda-sol, óculos de sol, máscara na fumaça das queimadas, andar na sombra) e ganham
+pontos trocados por descontos. Por isso há
 incentivo para fraudar: seja rigoroso e descreva apenas o que está visível.
 
 - Marque foto de tela ou impressa quando a imagem for uma foto de outra tela
@@ -144,6 +155,8 @@ incentivo para fraudar: seja rigoroso e descreva apenas o que está visível.
       images: [(photo, mime)],
       instruction: 'Categoria declarada: ${c.label}.\n'
           'Para comprovar, a foto precisa mostrar: ${c.evidence}.\n'
+          '${screenshotCategories.contains(c.id) ? 'Nesta categoria a imagem DEVE ser um print da tela do celular: '
+              'isso não é fraude. Marque foto_de_tela_ou_impressa só se for uma foto de outra tela tirada com câmera.\n' : ''}'
           'Preencha o formato pedido.',
       schema: postSchema,
     );
@@ -173,7 +186,7 @@ incentivo para fraudar: seja rigoroso e descreva apenas o que está visível.
 
   static const pendingReview = Decision('revisao', 'Sua foto está na fila de revisão da equipe.');
 
-  /// Regras para boné, protetor, guarda-sol e óculos.
+  /// Regras para boné, protetor, guarda-sol, óculos, máscara, sombra e print do app.
   static Decision decidePost(Map<String, dynamic> ai) {
     final motivo = '${ai['motivo'] ?? ''}'.trim();
     if (ai['conteudo_seguro'] != true) {

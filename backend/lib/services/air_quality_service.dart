@@ -57,6 +57,53 @@ class AirQualityService {
     return bundle;
   }
 
+  final _grids = <String, (DateTime, List<Map<String, dynamic>>)>{};
+
+  /// Fumaça agora numa grade de [n]×[n] pontos sobre a cidade, para pintar o mapa.
+  /// O modelo tem resolução de dezenas de km: as diferenças entre bairros são
+  /// suaves, e os relatos de fumaça da comunidade completam o retrato.
+  Future<List<Map<String, dynamic>>> grid(GeoBounds b, {int n = 5}) async {
+    final key = '${b.south}:${b.west}:$n';
+    final hit = _grids[key];
+    if (hit != null && DateTime.now().difference(hit.$1).inMinutes < 30) return hit.$2;
+
+    final lats = <double>[], lngs = <double>[];
+    for (var i = 0; i < n; i++) {
+      for (var j = 0; j < n; j++) {
+        lats.add(b.south + (b.north - b.south) * (i + 0.5) / n);
+        lngs.add(b.west + (b.east - b.west) * (j + 0.5) / n);
+      }
+    }
+    final uri = Uri.https('air-quality-api.open-meteo.com', '/v1/air-quality', {
+      'latitude': lats.map((v) => v.toStringAsFixed(4)).join(','),
+      'longitude': lngs.map((v) => v.toStringAsFixed(4)).join(','),
+      'current': 'pm10,pm2_5',
+      'timezone': 'GMT',
+    });
+    http.Response res;
+    try {
+      res = await _client.get(uri).timeout(const Duration(seconds: 15));
+    } catch (_) {
+      if (hit != null) return hit.$2;
+      throw ApiError(503, 'Mapa de fumaça indisponível no momento.');
+    }
+    if (res.statusCode != 200) {
+      if (hit != null) return hit.$2;
+      throw ApiError(503, 'Mapa de fumaça indisponível no momento.');
+    }
+    final body = jsonDecode(res.body);
+    final list = body is List ? body : [body];
+    final out = <Map<String, dynamic>>[];
+    for (var i = 0; i < list.length && i < lats.length; i++) {
+      final c = (list[i] as Map)['current'];
+      if (c is! Map || c['pm2_5'] is! num) continue;
+      final p = AirPoint(time: DateTime.now().toUtc(), pm25: (c['pm2_5'] as num).toDouble(), pm10: (c['pm10'] as num? ?? 0).toDouble());
+      out.add({'lat': lats[i], 'lng': lngs[i], 'pm25': p.pm25, 'pm10': p.pm10, 'index': p.index, 'level': p.level.name});
+    }
+    _grids[key] = (DateTime.now(), out);
+    return out;
+  }
+
   AirBundle _parse(Map<String, dynamic> data) {
     DateTime utc(String s) => DateTime.parse(s.endsWith('Z') ? s : '${s}Z');
     double n(Object? v) => v is num ? v.toDouble() : 0;

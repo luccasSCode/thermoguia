@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/providers.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/common.dart';
 import '../../core/widgets/leaf_icon.dart';
@@ -32,8 +33,16 @@ class AppIconController extends AsyncNotifier<LeafVariant> {
   Future<void> select(LeafVariant v) async {
     await _channel.invokeMethod<void>('set', {'name': v.name});
     state = AsyncData(v);
+    await ref.read(localStoreProvider).setString(_chosenKey, '1');
+    ref.invalidate(appIconChosenProvider);
   }
 }
+
+const _chosenKey = 'app_icon_chosen';
+
+/// true depois que a pessoa escolheu um ícone: o convite some do Perfil
+/// (a escolha continua em Configurações).
+final appIconChosenProvider = Provider<bool>((ref) => ref.watch(localStoreProvider).getString(_chosenKey) == '1');
 
 final appIconProvider = AsyncNotifierProvider<AppIconController, LeafVariant>(AppIconController.new);
 
@@ -71,14 +80,8 @@ class AppIconPicker extends ConsumerWidget {
               ),
           ],
         ),
-        const SizedBox(height: 10),
-        Text(
-          choose
-              ? 'Com "Ícones temáticos" ligado (Android 13 ou mais recente), o ícone acompanha as cores do seu papel de parede.'
-              : 'No iPhone, o ícone segue o sistema: toque e segure a Tela de Início, escolha Editar → Personalizar '
-                  'e selecione Escuro ou Tingido (iOS 18 ou mais recente).',
-          style: t.bodyMedium,
-        ),
+        const SizedBox(height: 6),
+        Text('Escolha como o ThermoGuia aparece na tela inicial do celular.', style: t.bodyMedium),
       ]),
     );
   }

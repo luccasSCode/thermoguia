@@ -53,7 +53,14 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
+      // O que é o Social e um botão para cada comprovação.
+      expect(find.text('O que é o Social'), findsOneWidget);
+      expect(find.text('Máscara na fumaça'), findsOneWidget);
+      expect(find.text('Print do app aberto'), findsOneWidget);
+
       // Feed: só posts verificados, com o selo.
+      await tester.drag(find.byType(Scrollable).last, const Offset(0, -700));
+      await tester.pumpAndSettle();
       expect(find.text('Verificado'), findsWidgets);
       expect(find.textContaining('comprovados'), findsWidgets);
       await tester.scrollUntilVisible(find.text('De boné hoje'), 300, scrollable: find.byType(Scrollable).last);

@@ -65,6 +65,19 @@
         </activity-alias>
         <meta-data android:name="flutterEmbedding" android:value="2"/>
 
+        <!-- Login com Google e Facebook: o navegador volta para thermoguia://auth. -->
+        <activity
+            android:name="com.linusu.flutter_web_auth_2.CallbackActivity"
+            android:exported="true"
+            android:taskAffinity="">
+            <intent-filter android:label="flutter_web_auth_2">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="thermoguia"/>
+            </intent-filter>
+        </activity>
+
         <!-- Notificações programadas (resumo da manhã, pico de calor, Clube H2O). -->
         <receiver android:exported="false"
             android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"/>

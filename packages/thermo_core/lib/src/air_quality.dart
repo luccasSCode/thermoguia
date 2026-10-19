@@ -5,7 +5,7 @@ import 'models.dart';
 enum AirLevel {
   boa('Boa', 'Ar limpo. Ótimo para sair e arejar a casa.'),
   moderada('Moderada', 'Ar aceitável. Quem tem asma, bronquite ou problema cardíaco pode sentir.'),
-  ruim('Ruim', 'Fumaça no ar. Use máscara PFF2 na rua e evite esforço.'),
+  ruim('Ruim', 'Fumaça no ar. Use máscara de proteção na rua e evite esforço.'),
   muitoRuim('Muito ruim', 'Ar muito poluído. Evite sair e mantenha as janelas fechadas.'),
   pessima('Péssima', 'Perigo: fumaça intensa. Fique em ambiente fechado.');
 
@@ -91,7 +91,7 @@ class AirAdvice {
   const AirAdvice({required this.level, required this.mask, required this.title, required this.message});
   final AirLevel level;
 
-  /// true quando a recomendação inclui máscara PFF2 (N95) na rua.
+  /// true quando a recomendação inclui máscara de proteção (a que veda o rosto) na rua.
   final bool mask;
   final String title;
   final String message;
@@ -115,19 +115,19 @@ AirAdvice adviseAir(AirLevel level, Persona persona) {
         mask: sensitive,
         title: sensitive ? 'Ar aceitável, mas cuide-se' : 'Ar aceitável',
         message: sensitive
-            ? 'Para pessoas idosas, a fumaça leve já irrita. Prefira caminhadas curtas e leve uma máscara PFF2.'
+            ? 'Para pessoas idosas, a fumaça leve já irrita. Prefira caminhadas curtas e leve uma máscara de proteção.'
             : 'Dá para sair normalmente. Quem tem asma ou bronquite deve evitar esforço longo na rua.',
       );
     case AirLevel.ruim:
       return AirAdvice(
         level: level,
         mask: true,
-        title: 'Fumaça no ar: use máscara PFF2',
+        title: 'Fumaça no ar: use máscara de proteção',
         message: hard
             ? 'Pedalando você respira 2× mais fumaça. Hoje, prefira ônibus ou deixe a pedalada para a Hora Segura.'
             : street
-                ? 'Use PFF2 durante o turno e leve uma reserva para trocar quando ficar úmida. Faça pausas em lugar fechado.'
-                : 'Na rua, use PFF2 bem ajustada ao rosto. Evite esforço e deixe as janelas fechadas.',
+                ? 'Use máscara de proteção durante o turno e leve uma reserva para trocar quando ficar úmida. Faça pausas em lugar fechado.'
+                : 'Na rua, use máscara de proteção bem ajustada ao rosto. Evite esforço e deixe as janelas fechadas.',
       );
     case AirLevel.muitoRuim:
       return AirAdvice(
@@ -135,15 +135,15 @@ AirAdvice adviseAir(AirLevel level, Persona persona) {
         mask: true,
         title: 'Ar muito poluído: evite sair',
         message: street
-            ? 'Se não puder parar, use PFF2 o tempo todo e troque a cada 4 horas. Beba água para aliviar a garganta.'
-            : 'Saia só se precisar, sempre com PFF2. Feche janelas e portas; um pano úmido na fresta ajuda.',
+            ? 'Se não puder parar, use máscara de proteção o tempo todo e troque a cada 4 horas. Beba água para aliviar a garganta.'
+            : 'Saia só se precisar, sempre de máscara de proteção. Feche janelas e portas; um pano úmido na fresta ajuda.',
       );
     case AirLevel.pessima:
       return const AirAdvice(
         level: AirLevel.pessima,
         mask: true,
         title: 'Perigo: fumaça intensa',
-        message: 'Fique em casa com tudo fechado. Se precisar sair, use PFF2. '
+        message: 'Fique em casa com tudo fechado. Se precisar sair, use máscara de proteção. '
             'Falta de ar, chiado ou dor no peito: procure atendimento.',
       );
   }

@@ -1,35 +1,58 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:thermo_core/thermo_core.dart';
+import 'package:thermoguia/core/providers.dart';
 import 'package:thermoguia/core/widgets/leaf_animation.dart';
+import 'package:thermoguia/features/session/presentation/onboarding_screen.dart';
 import 'package:thermoguia/features/session/presentation/persona_picker.dart';
 import 'package:thermoguia/features/session/presentation/social_sign_in.dart';
 import 'package:thermoguia/features/session/presentation/welcome_screen.dart';
 
 void main() {
   for (final dark in [false, true]) {
-    testWidgets('boas-vindas com login social cabe na tela (${dark ? 'escuro' : 'claro'})', (tester) async {
-      tester.view.physicalSize = const Size(360 * 3, 740 * 3);
+    testWidgets('boas-vindas e perfil cabem na tela sem rolar (${dark ? 'escuro' : 'claro'})', (tester) async {
+      tester.view.physicalSize = const Size(360 * 3, 800 * 3);
       tester.view.devicePixelRatio = 3;
       addTearDown(tester.view.reset);
 
-      await tester.pumpWidget(MaterialApp(
-        theme: ThemeData(brightness: dark ? Brightness.dark : Brightness.light),
-        home: const WelcomeScreen(),
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final router = GoRouter(initialLocation: '/boas-vindas', routes: [
+        GoRoute(path: '/boas-vindas', builder: (_, __) => const WelcomeScreen()),
+        GoRoute(path: '/comecar', builder: (_, __) => const OnboardingScreen()),
+      ]);
+      await tester.pumpWidget(ProviderScope(
+        overrides: [sharedPrefsProvider.overrideWithValue(prefs)],
+        child: MaterialApp.router(
+          theme: ThemeData(brightness: dark ? Brightness.dark : Brightness.light),
+          routerConfig: router,
+        ),
       ));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 6));
 
-      final list = find.byType(Scrollable).first;
+      double scrollExtent() =>
+          tester.state<ScrollableState>(find.byType(Scrollable).first).position.maxScrollExtent;
+
+      expect(scrollExtent(), 0);
       for (final p in SocialProvider.values) {
-        await tester.scrollUntilVisible(find.text(p.label), 200, scrollable: list);
         expect(find.text(p.label), findsOneWidget);
       }
       expect(find.byType(SocialLogo), findsNWidgets(2));
-      expect(find.textContaining('Discord'), findsNothing);
 
+      // Os botões sociais só levam à escolha de perfil.
       await tester.tap(find.text('Entrar com o Facebook'));
-      await tester.pump();
-      expect(find.textContaining('O login com Facebook chega em breve'), findsOneWidget);
+      await tester.pumpAndSettle();
+      expect(find.text('Como você costuma andar pela cidade?'), findsOneWidget);
+      expect(scrollExtent(), 0);
+
+      // O perfil com o texto mais longo também cabe.
+      await tester.tap(find.text('Idoso'));
+      await tester.pumpAndSettle();
+      expect(scrollExtent(), 0);
+      expect(find.text('Continuar'), findsOneWidget);
     });
   }
 

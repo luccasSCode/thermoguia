@@ -10,6 +10,7 @@ import 'package:thermoguia/core/providers.dart';
 import 'package:thermoguia/core/storage/local_store.dart';
 import 'package:thermoguia/features/rewards/club_screen.dart';
 
+
 class _FakeApi extends ApiClient {
   _FakeApi(super.store);
 
@@ -40,13 +41,29 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('gotas'), findsOneWidget);
+      // Próxima conquista: o desconto mais barato que ainda falta liberar.
+      expect(find.text('Próxima conquista'), findsOneWidget);
+      expect(find.text('5% no fardo de água mineral'), findsOneWidget);
       final list = find.byType(Scrollable).first;
-      for (final text in ['Meus cupons', 'Troque suas gotas', '25% em óculos de sol com proteção UV', 'Como ganhar gotas', 'Últimas gotas']) {
+      for (final text in ['Ganhe gotas', 'Descontos', 'Meus cupons', 'Últimas gotas']) {
         await tester.scrollUntilVisible(find.text(text), 250, scrollable: list);
         expect(find.text(text), findsOneWidget);
       }
+      // Cupons lado a lado: o número em destaque e o item embaixo.
+      await tester.scrollUntilVisible(find.text('Descontos'), -250, scrollable: list);
+      final coupons = find.byWidgetPredicate((w) => w is Scrollable && w.axisDirection == AxisDirection.right);
+      await tester.scrollUntilVisible(find.text('Óculos de sol com proteção UV'), 200, scrollable: coupons);
+      expect(find.text('25%'), findsOneWidget);
       expect(find.text('ThermoGuia+'), findsWidgets);
-      expect(find.text('Exemplo'), findsWidgets);
+      await tester.scrollUntilVisible(find.text('Últimas gotas'), 250, scrollable: list);
+      expect(find.textContaining('seguidos abrindo o app = +20 gotas'), findsOneWidget);
     });
   }
+
+  test('destaque do cupom', () {
+    expect(couponHeadline('25% em óculos de sol com proteção UV'), '25%');
+    expect(couponItem('25% em óculos de sol com proteção UV'), 'Óculos de sol com proteção UV');
+    expect(couponHeadline('Leve 3 águas de coco e pague 2'), '3 por 2');
+    expect(couponHeadline('Bebida gelada pela metade do preço'), '50%');
+  });
 }

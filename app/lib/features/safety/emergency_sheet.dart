@@ -50,6 +50,7 @@ class _EmergencySheetState extends ConsumerState<_EmergencySheet> {
   void initState() {
     super.initState();
     ref.read(auditLoggerProvider).log('emergencia_aberta', details: {'gatilho': widget.trigger});
+    if (widget.trigger == 'usuario') ref.read(safetyRepositoryProvider).helpAlert();
   }
 
   Future<bool> _confirm(String title, String body, String action) async =>

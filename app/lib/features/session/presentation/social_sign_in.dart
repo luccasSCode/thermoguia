@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:thermo_core/thermo_core.dart';
+
+import '../../../core/widgets/common.dart';
+import '../../../core/widgets/thermo_loader.dart';
+import 'session_controller.dart';
 
 /// Provedores de login social mostrados na tela de boas-vindas.
 enum SocialProvider {
@@ -52,10 +58,35 @@ class SocialLogo extends StatelessWidget {
   }
 }
 
-/// Os botões de login social, um embaixo do outro.
-class SocialSignInButtons extends StatelessWidget {
-  const SocialSignInButtons({super.key, required this.onPressed});
-  final ValueChanged<SocialProvider> onPressed;
+/// Os botões de login social, um embaixo do outro. Entram de verdade pelo
+/// Google ou Facebook (o servidor conduz o login pelo navegador), a menos que
+/// [onPressed] seja dado: aí são só visuais e chamam [onPressed].
+class SocialSignInButtons extends ConsumerStatefulWidget {
+  const SocialSignInButtons({super.key, this.persona, this.onPressed});
+
+  /// Perfil escolhido no cadastro, usado se a conta for nova.
+  final Persona? persona;
+
+  /// Substitui o login social por esta ação.
+  final VoidCallback? onPressed;
+
+  @override
+  ConsumerState<SocialSignInButtons> createState() => _SocialSignInButtonsState();
+}
+
+class _SocialSignInButtonsState extends ConsumerState<SocialSignInButtons> {
+  SocialProvider? _busy;
+
+  Future<void> _login(SocialProvider p) async {
+    setState(() => _busy = p);
+    try {
+      await ref.read(sessionProvider).socialLogin(p.name, p.brand, persona: widget.persona);
+    } catch (e) {
+      if (mounted) showMessage(context, errorText(e));
+    } finally {
+      if (mounted) setState(() => _busy = null);
+    }
+  }
 
   @override
   Widget build(BuildContext context) => Column(
@@ -63,9 +94,9 @@ class SocialSignInButtons extends StatelessWidget {
         children: [
           for (final p in SocialProvider.values) ...[
             OutlinedButton(
-              onPressed: () => onPressed(p),
+              onPressed: widget.onPressed ?? (_busy == null ? () => _login(p) : null),
               child: Row(children: [
-                SocialLogo(p),
+                if (_busy == p) const ThermoLoader.inline() else SocialLogo(p),
                 const SizedBox(width: 12),
                 Expanded(child: Text(p.label, textAlign: TextAlign.center)),
                 // Mantém o texto centralizado em relação ao botão.

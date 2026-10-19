@@ -14,11 +14,15 @@ import '../../../core/services/location_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/common.dart';
+import '../../air/air_providers.dart';
 import '../../climate/climate_providers.dart';
 import '../../hydration/hydration_controller.dart';
 import '../../safety/emergency_sheet.dart';
+import '../../session/presentation/session_controller.dart';
 import '../data/route_models.dart';
+import 'map_effects.dart';
 import 'navigation_controller.dart';
+import 'route_conditions.dart';
 import 'routes_controller.dart';
 import 'search_sheet.dart';
 import 'trip_controller.dart';
@@ -35,6 +39,7 @@ class MapScreen extends ConsumerStatefulWidget {
 class _MapScreenState extends ConsumerState<MapScreen> {
   final _map = MapController();
   bool _showOases = true;
+  bool _showSmoke = true;
 
   /// Durante o trajeto, o mapa acompanha a pessoa (como no Waze) até ela
   /// arrastar o mapa; aí aparece o botão "Recentralizar".
@@ -74,6 +79,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final nav = ref.watch(navigationProvider);
     final oases = _showOases ? (ref.watch(oasesProvider).valueOrNull ?? const <Oasis>[]) : const <Oasis>[];
     final reports = ref.watch(reportsProvider).valueOrNull ?? const <CommunityReport>[];
+    final smoke = _showSmoke ? (ref.watch(airMapProvider).valueOrNull ?? const <AirMapPoint>[]) : const <AirMapPoint>[];
+    final conditions = trip == null ? ref.watch(routeConditionsProvider) : null;
     final mePoint = nav?.position ?? live ?? loc?.point;
     final me =
         mePoint == null ? const LatLng(AppConfig.defaultLat, AppConfig.defaultLng) : LatLng(mePoint.lat, mePoint.lng);
@@ -113,9 +120,44 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             ),
             children: [
               TileLayer(urlTemplate: AppConfig.tileUrl, userAgentPackageName: AppConfig.packageName),
+              // Fumaça por região: manchas na cor da qualidade do ar de cada ponto.
+              if (smoke.isNotEmpty)
+                CircleLayer(circles: [
+                  for (final p in smoke)
+                    CircleMarker(
+                      point: LatLng(p.lat, p.lng),
+                      radius: 3200,
+                      useRadiusInMeter: true,
+                      color: Tokens.air(p.level).withValues(alpha: p.level.isBad ? 0.22 : 0.12),
+                    ),
+                ]),
+              // Animações: fumaça se mexendo onde o ar está ruim e sol no destino
+              // quando o sol está forte.
+              MarkerLayer(markers: [
+                for (final p in smoke)
+                  if (p.level.isBad)
+                    Marker(
+                      point: LatLng(p.lat, p.lng),
+                      width: 160,
+                      height: 160,
+                      child: SmokeCloud(color: Tokens.air(p.level)),
+                    ),
+                if (dest != null && conditions != null && conditions.smokeAtDestination)
+                  Marker(
+                    point: dest.latLng,
+                    width: 190,
+                    height: 190,
+                    child: SmokeCloud(color: Tokens.air(conditions.destinationAir!)),
+                  ),
+                if (dest != null && conditions?.sun != null)
+                  Marker(point: dest.latLng, width: 150, height: 150, child: const SunGlow()),
+              ]),
               PolylineLayer(polylines: [
                 for (final r in others)
                   Polyline(points: r.points, strokeWidth: 5, color: Colors.grey.withValues(alpha: 0.7)),
+                // Brilho verde em volta da rota escolhida.
+                if (shown != null)
+                  Polyline(points: shown.points, strokeWidth: 20, color: Tokens.copa.withValues(alpha: 0.18)),
                 if (shown != null) ..._shadeLines(shown, context.sunMode ? 9 : 7),
               ]),
               MarkerLayer(markers: [
@@ -135,7 +177,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       message: r.note.isEmpty ? r.kind.label : '${r.kind.label}: ${r.note}',
                       child: _Pin(
                         icon: reportIcon(r.kind),
-                        color: r.kind == ReportKind.sombraBoa ? Tokens.copa : Tokens.sol,
+                        color: switch (r.kind) {
+                          ReportKind.sombraBoa => Tokens.copa,
+                          ReportKind.fumaca => const Color(0xFF8E3FAE),
+                          _ => Tokens.sol,
+                        },
                         small: true,
                       ),
                     ),
@@ -145,13 +191,16 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       point: dest.latLng,
                       width: 44,
                       height: 44,
-                      child: const _Pin(icon: Icons.flag, color: Tokens.tinta)),
+                      child: const _Pin(icon: Icons.flag, color: Tokens.copa)),
                 if (nav != null && nav.position != null)
                   Marker(point: me, width: 44, height: 44, child: _NavArrow(course: nav.course))
                 else
                   Marker(point: me, width: 26, height: 26, child: const _Me()),
               ]),
-              const RichAttributionWidget(attributions: [TextSourceAttribution('© OpenStreetMap')]),
+              const RichAttributionWidget(attributions: [
+                TextSourceAttribution('© OpenStreetMap'),
+                TextSourceAttribution('Fumaça: CAMS/Open-Meteo'),
+              ]),
             ],
           ),
           if (trip != null && nav != null)
@@ -207,10 +256,18 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       ),
                       const SizedBox(width: 8),
                       _RoundButton(
+                        icon: Icons.air,
+                        tooltip: _showSmoke ? 'Ocultar fumaça' : 'Mostrar fumaça por região',
+                        selected: _showSmoke,
+                        onTap: () => setState(() => _showSmoke = !_showSmoke),
+                      ),
+                      const SizedBox(width: 8),
+                      _RoundButton(
                           icon: Icons.my_location, tooltip: 'Minha localização', onTap: () => _map.move(me, 16)),
                     ],
                   ),
                   if (loc != null && loc.isApproximate) _GpsNotice(status: loc.status),
+                  if (smoke.any((p) => p.level.isBad)) _SmokeBanner(points: smoke),
                 ]),
               ),
             ),
@@ -283,6 +340,17 @@ class _Panel extends ConsumerWidget {
         : s.destination == null
             ? _IdlePanel(onPickDestination: onPickDestination)
             : _RoutesPanel(state: s);
+    // Com destino escolhido, "Iniciar trajeto" fica fixo embaixo, sempre à vista.
+    final route = s.selectedRoute;
+    final start = trip == null && s.destination != null && s.error == null
+        ? FilledButton.icon(
+            icon: const Icon(Icons.navigation_outlined),
+            label: const Text('Iniciar trajeto'),
+            onPressed: s.loading || route == null
+                ? null
+                : () => ref.read(tripProvider.notifier).start(route, s.result!.routes),
+          )
+        : null;
     return Material(
       elevation: 8,
       color: Theme.of(context).colorScheme.surface,
@@ -292,7 +360,19 @@ class _Panel extends ConsumerWidget {
       ),
       child: SafeArea(
         top: false,
-        child: SingleChildScrollView(padding: const EdgeInsets.fromLTRB(20, 18, 20, 16), child: child),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Flexible(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(20, 18, 20, start == null ? 16 : 10),
+                child: child,
+              ),
+            ),
+            if (start != null) Padding(padding: const EdgeInsets.fromLTRB(20, 0, 20, 12), child: start),
+          ],
+        ),
       ),
     );
   }
@@ -311,7 +391,8 @@ class _IdlePanel extends ConsumerWidget {
       children: [
         Text('Rotas Frescas', style: t.titleLarge),
         const SizedBox(height: 6),
-        Text('Escolha um destino e comparamos os caminhos pela sombra no horário em que você vai passar.',
+        Text('Escolha um destino e comparamos os caminhos pela sombra no horário em que você vai passar. '
+            'As manchas mostram a fumaça por região.',
             style: t.bodyMedium),
         if (saved.isNotEmpty) ...[
           const SizedBox(height: 12),
@@ -340,15 +421,21 @@ class _RoutesPanel extends ConsumerWidget {
     final ctrl = ref.read(routesProvider.notifier);
     final t = Theme.of(context).textTheme;
     final result = state.result;
+    final conditions = ref.watch(routeConditionsProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(children: [
           Expanded(
             child: SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'foot', icon: Icon(Icons.directions_walk), label: Text('A pé')),
-                ButtonSegment(value: 'bike', icon: Icon(Icons.directions_bike), label: Text('Bicicleta')),
+              segments: [
+                for (final m in travelModesFor(ref.watch(personaProvider)))
+                  switch (m) {
+                    'moto' => const ButtonSegment(value: 'moto', icon: Icon(Icons.two_wheeler), label: Text('Moto')),
+                    'bike' => const ButtonSegment(
+                        value: 'bike', icon: Icon(Icons.directions_bike), label: Text('Bicicleta')),
+                    _ => const ButtonSegment(value: 'foot', icon: Icon(Icons.directions_walk), label: Text('A pé')),
+                  },
               ],
               selected: {state.mode},
               onSelectionChanged: (v) => ctrl.setMode(v.first),
@@ -379,7 +466,25 @@ class _RoutesPanel extends ConsumerWidget {
         else if (state.error != null)
           ErrorView(error: state.error!, onRetry: ctrl.compute)
         else if (result != null) ...[
+          if (conditions != null && conditions.any)
+            ConditionsWarning(conditions: conditions, destination: state.destination!),
           Text(result.advice, style: t.bodyLarge),
+          if (result.routes.any((r) => r.approximate))
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Icon(Icons.info_outline, size: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Não há caminho ${state.mode == 'bike' ? 'de bicicleta' : 'a pé'} mapeado até aqui, então '
+                    'seguimos pelas ruas da cidade. Parte do trajeto pode não ter '
+                    '${state.mode == 'bike' ? 'ciclovia' : 'calçada'}: atenção ao trânsito.',
+                    style: t.bodySmall,
+                  ),
+                ),
+              ]),
+            ),
           if (!result.greenReady)
             Padding(
               padding: const EdgeInsets.only(top: 6),
@@ -395,12 +500,6 @@ class _RoutesPanel extends ConsumerWidget {
               onTap: () => ctrl.select(i),
             ),
           const _Legend(),
-          const SizedBox(height: 12),
-          FilledButton.icon(
-            icon: const Icon(Icons.navigation_outlined),
-            label: const Text('Iniciar trajeto'),
-            onPressed: () => ref.read(tripProvider.notifier).start(state.selectedRoute!, result.routes),
-          ),
         ],
       ],
     );
@@ -497,11 +596,15 @@ class _TripPanel extends ConsumerWidget {
   /// Google Maps no Android). O caminho pode não ser a Rota Fresca.
   Future<void> _openExternal(BuildContext context) async {
     final d = trip.destination;
-    final bike = trip.mode == 'bike';
+    final (apple, google) = switch (trip.mode) {
+      'moto' => ('d', 'two-wheeler'),
+      'bike' => ('c', 'bicycling'),
+      _ => ('w', 'walking'),
+    };
     final uri = defaultTargetPlatform == TargetPlatform.iOS
-        ? Uri.parse('https://maps.apple.com/?daddr=${d.lat},${d.lng}&dirflg=${bike ? 'c' : 'w'}')
+        ? Uri.parse('https://maps.apple.com/?daddr=${d.lat},${d.lng}&dirflg=$apple')
         : Uri.parse('https://www.google.com/maps/dir/?api=1&destination=${d.lat},${d.lng}'
-            '&travelmode=${bike ? 'bicycling' : 'walking'}');
+            '&travelmode=$google');
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication) && context.mounted) {
       showMessage(context, 'Não foi possível abrir o app de mapas.');
     }
@@ -880,16 +983,56 @@ class _Me extends StatelessWidget {
 }
 
 class _RoundButton extends StatelessWidget {
-  const _RoundButton({required this.icon, required this.tooltip, required this.onTap});
+  const _RoundButton({required this.icon, required this.tooltip, required this.onTap, this.selected = false});
   final IconData icon;
   final String tooltip;
   final VoidCallback onTap;
+  final bool selected;
 
   @override
   Widget build(BuildContext context) => Material(
         elevation: 3,
         shape: const CircleBorder(),
-        color: Theme.of(context).colorScheme.surface,
-        child: IconButton(tooltip: tooltip, icon: Icon(icon), onPressed: onTap),
+        color: selected ? Tokens.copa : Theme.of(context).colorScheme.surface,
+        child: IconButton(
+          tooltip: tooltip,
+          icon: Icon(icon, color: selected ? Colors.white : null),
+          onPressed: onTap,
+        ),
       );
+}
+
+/// Onde a fumaça está pior agora, em palavras ("zona Norte, índice 190").
+class _SmokeBanner extends StatelessWidget {
+  const _SmokeBanner({required this.points});
+  final List<AirMapPoint> points;
+
+  @override
+  Widget build(BuildContext context) {
+    final worst = points.reduce((a, b) => a.index >= b.index ? a : b);
+    final t = Theme.of(context).textTheme;
+    final color = Tokens.air(worst.level, sunMode: context.sunMode);
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Material(
+        elevation: 2,
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(Tokens.radiusControl),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(children: [
+            Icon(Icons.air, color: color, size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Fumaça pior ${zoneOf(worst.lat, worst.lng)}: ar ${worst.level.label.toLowerCase()} '
+                '(índice ${worst.index}). Toque e segure no mapa para relatar fumaça.',
+                style: t.bodySmall,
+              ),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
 }

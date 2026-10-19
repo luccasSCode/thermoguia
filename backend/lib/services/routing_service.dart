@@ -40,6 +40,10 @@ class FreshRoute {
   List<Maneuver> maneuvers;
   List<RouteAlert> alerts = const [];
 
+  /// Traçado pela malha de ruas de carro (plano B): parte do caminho pode não
+  /// ter calçada ou ciclovia mapeada.
+  bool approximate = false;
+
   double shadeScore = 0;
   double sunExposureMin = 0;
   double thermalLoad = 0;
@@ -60,6 +64,7 @@ class FreshRoute {
         'thermalLoad': double.parse(thermalLoad.toStringAsFixed(1)),
         'maneuvers': [for (final m in maneuvers) m.toJson()],
         'alerts': [for (final a in alerts) a.toJson()],
+        'approximate': approximate,
         'points': [
           for (var i = 0; i < points.length; i++)
             [
@@ -78,6 +83,9 @@ class FreshRoute {
 /// 3. Pontua cada rota a cada ~20 m: cobertura verde + sombra de prédios
 ///    conforme a altura do sol no horário de passagem + relatos da comunidade.
 /// 4. Ordena pelo custo personalizado (preferência de sombra aprendida).
+///    Se o mapa a pé/bicicleta não ligar os pontos (trecho sem calçada mapeada,
+///    como o acesso à Ponta Negra), usa a malha de ruas de carro com o tempo
+///    recalculado para quem anda ou pedala.
 /// 5. Monta as manobras (vire à direita...) e os avisos do caminho: sol forte,
 ///    lado da rua com sombra, pontos de refresco e relatos da comunidade.
 class RoutingService {
@@ -98,21 +106,41 @@ class RoutingService {
   }) async {
     final straight = distanceMeters(origin, destination);
     if (straight < 30) throw ApiError(400, 'Origem e destino estão muito próximos.');
-    final maxM = mode == 'bike' ? 25000 : 12000;
+    final maxM = switch (mode) { 'moto' => 40000, 'bike' => 25000, _ => 12000 };
     if (straight > maxM) {
-      throw ApiError(400, 'Trajeto longo demais para ${mode == 'bike' ? 'bicicleta' : 'caminhada'}.');
+      final what = switch (mode) { 'moto' => 'moto', 'bike' => 'bicicleta', _ => 'caminhada' };
+      throw ApiError(400, 'Trajeto longo demais para $what.');
     }
 
-    final routes = await _osrm([origin, destination], mode, alternatives: true);
+    // Moto (entregador) anda pelas ruas de carro; a sombra continua pesando na escolha.
+    var base = switch (mode) {
+      'moto' => _config.routingCarUrl,
+      'bike' => _config.routingBikeUrl,
+      _ => _config.routingFootUrl,
+    };
+    var routes = await _osrm(base, [origin, destination], alternatives: true);
+    final approximate = routes.isEmpty && mode != 'moto';
+    if (approximate) {
+      base = _config.routingCarUrl;
+      routes = await _osrm(base, [origin, destination], alternatives: true);
+    }
     if (routes.isEmpty) throw ApiError(404, 'Não encontramos um caminho entre esses pontos.');
+    if (approximate) {
+      // O tempo do carro não serve: recalcula na velocidade de quem anda ou pedala.
+      final speed = mode == 'bike' ? bikeSpeedMs : walkSpeedMs;
+      routes = [for (final r in routes) _atSpeed(r, speed)];
+    }
 
     final fastest = routes.map((r) => r.durationS).reduce(math.min);
-    final limit = mode == 'bike' ? 8000 : 6000;
+    // Desvios por áreas verdes só para quem anda ou pedala.
+    final limit = switch (mode) { 'moto' => 0, 'bike' => 8000, _ => 6000 };
     if (_green.ready && straight <= limit) {
       for (final via in _greenVias(origin, destination)) {
         try {
-          final r = await _osrm([origin, via, destination], mode, alternatives: false);
-          if (r.isNotEmpty && r.first.durationS <= fastest * 1.6) routes.add(r.first);
+          final r = await _osrm(base, [origin, via, destination], alternatives: false);
+          if (r.isEmpty) continue;
+          final viaRoute = approximate ? _atSpeed(r.first, mode == 'bike' ? bikeSpeedMs : walkSpeedMs) : r.first;
+          if (viaRoute.durationS <= fastest * 1.6) routes.add(viaRoute);
         } catch (_) {/* desvio opcional */}
       }
     }
@@ -130,12 +158,26 @@ class RoutingService {
     final top = scored.take(4).toList();
     for (final r in top) {
       _guide(r, departAt, mode, reports);
+      r.approximate = approximate;
     }
     return top;
   }
 
-  Future<List<FreshRoute>> _osrm(List<GeoPoint> pts, String mode, {required bool alternatives}) async {
-    final base = mode == 'bike' ? _config.routingBikeUrl : _config.routingFootUrl;
+  /// Velocidades médias usadas quando o tempo vem da malha de carro.
+  static const walkSpeedMs = 1.3; // ~4,7 km/h
+  static const bikeSpeedMs = 4.2; // ~15 km/h
+
+  FreshRoute _atSpeed(FreshRoute r, double speedMs) => FreshRoute(
+        points: r.points,
+        shade: r.shade,
+        distanceM: r.distanceM,
+        durationS: r.distanceM / speedMs,
+        maneuvers: r.maneuvers,
+      );
+
+  /// Rotas do OSRM. Lista vazia quando não há caminho entre os pontos (o OSRM
+  /// responde 400 com "NoRoute"); erro 503 só quando o serviço falha de fato.
+  Future<List<FreshRoute>> _osrm(String base, List<GeoPoint> pts, {required bool alternatives}) async {
     final coords = pts.map((p) => '${p.lng},${p.lat}').join(';');
     final uri = Uri.parse('$base/route/v1/driving/$coords').replace(queryParameters: {
       'overview': 'full',
@@ -151,8 +193,12 @@ class RoutingService {
     } catch (_) {
       throw ApiError(503, 'Serviço de rotas indisponível no momento.');
     }
-    if (res.statusCode != 200) throw ApiError(503, 'Serviço de rotas indisponível no momento.');
-    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    Map<String, dynamic>? data;
+    try {
+      data = jsonDecode(res.body) as Map<String, dynamic>;
+    } catch (_) {}
+    if (data?['code'] == 'NoRoute') return [];
+    if (res.statusCode != 200 || data == null) throw ApiError(503, 'Serviço de rotas indisponível no momento.');
     if (data['code'] != 'Ok') return [];
     return (data['routes'] as List).cast<Map<String, dynamic>>().map((r) {
       final coords = ((r['geometry'] as Map)['coordinates'] as List)
@@ -269,7 +315,7 @@ class RoutingService {
   void _guide(FreshRoute r, DateTime when, String mode, List<RouteReport> reports) {
     final line = RouteLine(r.points);
     final cum = line.cumulative;
-    final foot = mode != 'bike';
+    final foot = mode == 'foot';
 
     var hint = 0;
     r.maneuvers = [
@@ -415,6 +461,7 @@ class RoutingService {
       final base = switch (rep.kind) {
         'sem_sombra' => 'Pessoas relataram um trecho sem sombra adiante',
         'calor_extremo' => 'Calor extremo relatado adiante',
+        'fumaca' => 'Fumaça forte relatada adiante. Use máscara de proteção',
         'alagamento' => 'Alagamento relatado adiante',
         'transito' => 'Trânsito intenso adiante. Atravesse só na faixa',
         'obra' => 'Obra ou calçada bloqueada adiante',

@@ -47,6 +47,12 @@ class SessionController extends ChangeNotifier {
   Future<void> register(String name, String email, String password, Persona persona) async =>
       _set(SessionStatus.signedIn, await _repo.register(name, email, password, persona));
 
+  /// Google ou Facebook. Sem efeito se a pessoa fechar a tela de login.
+  Future<void> socialLogin(String provider, String brand, {Persona? persona}) async {
+    final user = await _repo.socialLogin(provider, brand, persona: persona);
+    if (user != null) _set(SessionStatus.signedIn, user);
+  }
+
   Future<void> update({String? name, Persona? persona}) async =>
       _set(SessionStatus.signedIn, await _repo.update(name: name, persona: persona));
 

@@ -4,13 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:thermo_core/thermo_core.dart';
 
 import '../../core/providers.dart';
+import '../air/air_providers.dart';
 import '../climate/climate_providers.dart';
 import '../rewards/rewards_controller.dart';
 
 /// Notificações programadas para trazer a pessoa de volta ao app na hora em
 /// que ele é útil. Nada entre 19h30 e 6h30; no máximo 4 por dia.
 enum Engagement {
-  manha('Resumo da manhã', 'Todo dia às 6h30: o calor do dia e o melhor horário para sair', 6, 30, 2),
+  manha('Resumo da manhã', 'Todo dia às 6h30: o calor, a fumaça e o melhor horário para sair', 6, 30, 2),
   pico('Aviso antes do pico de calor', 'Às 10h30, só em dias de risco muito alto', 10, 30, 1),
   fimDeTarde('Janela fresca do fim da tarde', 'Às 16h30, quando a tarde refresca', 16, 30, 5),
   clube('Clube H2O: sua sequência', 'Às 19h30, se você ainda não abriu o app no dia', 19, 30, 4),
@@ -56,6 +57,7 @@ List<PlannedNotification> planEngagement({
   required int weekEarned,
   required int weekTrips,
   required int balance,
+  List<AirPoint> air = const [],
 }) {
   final out = <PlannedNotification>[];
   final today = DateTime(now.year, now.month, now.day);
@@ -69,6 +71,15 @@ List<PlannedNotification> planEngagement({
     final late = hours.where((h) => h.time.hour >= 17 && h.time.hour <= 19).toList();
     final cool = late.isEmpty ? null : late.reduce((a, b) => _feels(a) <= _feels(b) ? a : b);
 
+    // Fumaça entre 6h e 18h do dia: o resumo da manhã avisa.
+    final smoke = air
+        .where((a) => a.time.year == day.year && a.time.month == day.month && a.time.day == day.day)
+        .where((a) => a.time.hour >= 6 && a.time.hour <= 18 && a.level.isBad)
+        .toList();
+    final smokeNote = smoke.isEmpty
+        ? ''
+        : 'Fumaça no ar (${smoke.map((a) => a.level).reduce((a, b) => a.index >= b.index ? a : b).label.toLowerCase()}): '
+            'use máscara de proteção ao sair. ';
     final dayPlan = <PlannedNotification>[];
     void add(Engagement e, String title, String body, String route) {
       if (enabled.contains(e) && at(e).isAfter(now)) dayPlan.add(PlannedNotification(e, at(e), title, body, route));
@@ -83,13 +94,14 @@ List<PlannedNotification> planEngagement({
         Engagement.manha,
         'Bom dia! Hoje a sensação chega a ${_feels(peak).round()}°C',
         'O pico é por volta das ${peak.time.hour}h. '
+            '$smokeNote'
             '${cool != null ? 'Prefira sair cedo ou depois das ${cool.time.hour}h. ' : 'Prefira sair cedo. '}'
             'Toque para ver o seu risco.',
         '/agora',
       );
     } else {
       add(Engagement.manha, 'Bom dia! Como vai estar o calor hoje?',
-          'Veja seu risco, o melhor horário para sair e sua meta de água.', '/agora');
+          '${smokeNote}Veja seu risco, o melhor horário para sair e sua meta de água.', '/agora');
     }
 
     // 10h30: só em dia de risco muito alto (índice de 38°C ou mais).
@@ -184,6 +196,7 @@ Future<void> rescheduleEngagement(Ref ref) async {
     weekEarned: rewards?.weekEarned ?? 0,
     weekTrips: rewards?.weekTrips ?? 0,
     balance: rewards?.balance ?? 0,
+    air: ref.read(airProvider).valueOrNull?.hourly ?? const [],
   );
   await svc.cancelRange(_idBase, _idBase + 99);
   for (var i = 0; i < math.min(plan.length, 60); i++) {

@@ -5,7 +5,7 @@ import 'package:thermoguia_backend/services/assistant_rules.dart';
 import 'package:thermoguia_backend/services/assistant_service.dart';
 
 /// Dia quente em Manaus, 10h: esquenta até 13h e refresca à noite; chuva às 16h.
-AssistantContext _ctx() {
+AssistantContext _ctx({bool smoke = false}) {
   final now = DateTime(2026, 10, 14, 10);
   final hourly = [
     for (var i = 0; i < 30; i++)
@@ -26,6 +26,12 @@ AssistantContext _ctx() {
     city: manaus, userName: 'Ana Souza', persona: Persona.pedestre, climate: climate, risk: risk,
     windows: bestOutdoorWindows(hourly, now: now), avoid: worstWindow(hourly, now: now), hourly: hourly,
     exposureMin: 0, waterMl: 400, nearbyOases: const ['Bebedouro (bebedouro, 120 m)'],
+    // Fumaça forte de manhã que limpa às 15h (ou ar limpo o dia todo).
+    airNow: AirPoint(time: now, pm25: smoke ? 110 : 12, pm10: smoke ? 112 : 15),
+    airHourly: [
+      for (var i = 0; i < 30; i++)
+        AirPoint(time: now.add(Duration(hours: i)), pm25: smoke && i < 5 ? 110 : 12, pm10: 15),
+    ],
   );
 }
 
@@ -139,5 +145,36 @@ void main() {
     ]) {
       test('não bloqueia: $q', () => expect(r.answer(q), isNot(TopicGuard.reply)));
     }
+  });
+
+  group('fumaça', () {
+    final smoky = RuleResponder(_ctx(smoke: true));
+    test('qualidade do ar ruim → máscara, cigarros e previsão de melhora', () {
+      final a = smoky.answer('Como está a fumaça hoje? Preciso de máscara?');
+      expect(a, contains('muito ruim'));
+      expect(a, contains('cigarros'));
+      expect(a, contains('máscara de proteção'));
+      expect(a, contains('melhora às 15h'));
+      expect(a, isNot(contains('PFF2')));
+    });
+    test('sombra com fumaça avisa que a árvore não filtra o ar', () {
+      expect(smoky.answer('Rua arborizada protege da fumaça? Vou pela sombra'), contains('não filtra'));
+    });
+    test('perguntas prontas do app sobre fumaça caem no assunto certo', () {
+      for (final q in [
+        'Quando a qualidade do ar vai melhorar?',
+        'Posso abrir as janelas de casa agora?',
+        'Respirar essa fumaça equivale a quantos cigarros?',
+        'Meus olhos e garganta estão ardendo. O que faço?',
+        'Qual a Hora Segura para sair hoje?',
+        'Dá para pedalar com essa fumaça?',
+      ]) {
+        expect(smoky.answer(q), contains('qualidade do ar'), reason: q);
+      }
+      expect(smoky.answer('Qual lado da rua tem mais sombra agora?'), contains('sombra'));
+    });
+    test('ar limpo → pode sair', () {
+      expect(r.answer('a qualidade do ar está boa?'), contains('boa'));
+    });
   });
 }

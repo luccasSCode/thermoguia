@@ -10,6 +10,7 @@ import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/common.dart';
 import 'persona_picker.dart';
 import 'session_controller.dart';
+import 'signup_layout.dart';
 import '../../../core/widgets/thermo_loader.dart';
 
 /// Duas etapas: quem é você e quais permissões o app usa (e por quê).
@@ -86,56 +87,54 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           ),
         ),
       ),
-      body: ListView(
-        padding: EdgeInsets.only(bottom: 24 + MediaQuery.paddingOf(context).bottom),
-        children: [
-          const _Header(),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: _step == 0 ? _profileStep(t) : _permissionsStep(t),
-            ),
+      body: SignupLayout(
+        // Nunca menor que a barra com o Voltar, que fica por cima da ilustração.
+        minHeaderHeight: MediaQuery.paddingOf(context).top + kToolbarHeight,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(24, 16, 24, 16 + MediaQuery.paddingOf(context).bottom),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: _step == 0 ? _profileStep(t) : _permissionsStep(t),
           ),
-        ],
+        ),
       ),
     );
   }
 
   List<Widget> _profileStep(TextTheme t) => [
-        Text('Como podemos te chamar?', style: t.headlineSmall),
-        const SizedBox(height: 16),
         TextField(
           controller: _name,
           textCapitalization: TextCapitalization.words,
-          decoration: const InputDecoration(labelText: 'Seu nome (opcional)'),
-        ),
-        const SizedBox(height: 32),
-        Text('Como você costuma andar pela cidade?', style: t.headlineSmall),
-        const SizedBox(height: 8),
-        Text(
-          'Cada perfil muda o cálculo de risco, a meta de água e os alertas. Toque em um para ver.',
-          style: t.bodyMedium,
+          decoration: const InputDecoration(labelText: 'Como podemos te chamar? (opcional)'),
         ),
         const SizedBox(height: 16),
-        PersonaPicker(value: _persona, showBenefits: true, onChanged: (p) => setState(() => _persona = p)),
-        const SizedBox(height: 40),
+        Text('Como você costuma andar pela cidade?', style: t.titleLarge),
+        const SizedBox(height: 4),
+        Text('Cada perfil muda o risco, a meta de água e os alertas.', style: t.bodyMedium),
+        const SizedBox(height: 12),
+        PersonaPicker(
+          value: _persona,
+          showBenefits: true,
+          compact: true,
+          onChanged: (p) => setState(() => _persona = p),
+        ),
+        const SizedBox(height: 12),
         FilledButton(onPressed: () => setState(() => _step = 1), child: const Text('Continuar')),
       ];
 
   List<Widget> _permissionsStep(TextTheme t) => [
         Text('O que o ThermoGuia vai usar', style: t.headlineSmall),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
         const _Permission(
           icon: Icons.my_location,
           title: 'Sua localização',
-          text: 'Para medir o calor onde você está e montar Rotas Frescas. '
+          text: 'Para medir o calor e a fumaça onde você está e montar Rotas Frescas. '
               'Só é usada com o app aberto.',
         ),
         const _Permission(
           icon: Icons.notifications_active_outlined,
           title: 'Notificações',
-          text: 'Para lembrar de beber água e avisar quando o calor ficar perigoso.',
+          text: 'Para lembrar de beber água e avisar quando o calor ou a fumaça ficarem perigosos.',
         ),
         const _Permission(
           icon: Icons.verified_user_outlined,
@@ -143,7 +142,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           text: 'Nada é enviado a familiares ou serviços de emergência sem a sua confirmação. '
               'Cada decisão fica registrada no seu histórico.',
         ),
-        const SizedBox(height: 32),
+        const SizedBox(height: 8),
         FilledButton(
           onPressed: _busy ? null : _finish,
           child: _busy
@@ -151,21 +150,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               : const Text('Permitir e começar'),
         ),
       ];
-}
-
-/// Ilustração de Manaus (rio, ponte, Teatro Amazonas e a folha-rota) no topo.
-class _Header extends StatelessWidget {
-  const _Header();
-
-  @override
-  Widget build(BuildContext context) => const AspectRatio(
-        aspectRatio: 1170 / 780,
-        child: Image(
-          image: AssetImage('assets/illustrations/signup_header.png'),
-          fit: BoxFit.cover,
-          excludeFromSemantics: true,
-        ),
-      );
 }
 
 class _Permission extends StatelessWidget {

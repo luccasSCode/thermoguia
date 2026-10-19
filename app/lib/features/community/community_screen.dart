@@ -73,12 +73,10 @@ class _Feed extends ConsumerWidget {
         loading: () => const Center(child: ThermoLoader()),
         error: (e, _) => ListView(children: [ErrorView(error: e, onRetry: () => ref.read(feedProvider.notifier).refresh())]),
         data: (posts) => posts.isEmpty
-            ? ListView(padding: const EdgeInsets.all(24), children: [
-                const Icon(Icons.groups_outlined, size: 56, color: Tokens.rio),
-                const SizedBox(height: 12),
-                Text('Ainda não há publicações verificadas.', style: t.titleMedium, textAlign: TextAlign.center),
-                const SizedBox(height: 6),
-                Text('Comprove que bebeu água ou se protegeu do sol e ganhe gotas no Clube H2O.',
+            ? ListView(padding: const EdgeInsets.fromLTRB(12, 12, 12, 96), children: [
+                const _HowItWorks(),
+                const SizedBox(height: 24),
+                Text('Ainda não há publicações verificadas. Seja a primeira pessoa!',
                     style: t.bodyMedium, textAlign: TextAlign.center),
               ])
             : NotificationListener<ScrollNotification>(
@@ -98,28 +96,116 @@ class _Feed extends ConsumerWidget {
   }
 }
 
-class _HowItWorks extends StatelessWidget {
+/// O que é o Social e um botão para cada tipo de comprovação.
+class _HowItWorks extends ConsumerWidget {
   const _HowItWorks();
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(12),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Container(
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Tokens.copa.withValues(alpha: 0.10),
-          borderRadius: BorderRadius.circular(Tokens.radiusControl),
+          gradient: LinearGradient(
+            colors: [Tokens.copa.withValues(alpha: 0.16), scheme.surface],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(Tokens.radiusBlock),
         ),
-        child: Row(children: [
-          const Icon(Icons.verified, color: Tokens.copa),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'Toda foto aqui foi verificada pela IA ou pela equipe antes de aparecer. '
-              'Quem recebe mais reações e comentários na semana ganha um selo.',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            const Icon(Icons.groups, color: Tokens.copa),
+            const SizedBox(width: 8),
+            Text('O que é o Social', style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+          ]),
+          const SizedBox(height: 6),
+          Text(
+            'Mostre com uma foto os cuidados que você tomou contra o calor e a fumaça. Cada foto é conferida '
+            'antes de aparecer, rende gotas no Clube H2O e inspira outras pessoas. Quem recebe mais reações na '
+            'semana ganha um selo.',
+            style: t.bodyMedium,
           ),
         ]),
-      );
+      ),
+      const SizedBox(height: 14),
+      Text('Comprove e ganhe gotas', style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+      const SizedBox(height: 8),
+      const ProofButtons(),
+    ]);
+  }
+}
+
+/// Um botão para cada comprovação, com o que a foto precisa mostrar.
+class ProofButtons extends ConsumerWidget {
+  const ProofButtons({super.key});
+
+  static Color _color(String id) => switch (id) {
+        'agua' => Tokens.rio,
+        'protetor' => Tokens.sol,
+        'oculos' => const Color(0xFF6B5BD2),
+        'mascara' => const Color(0xFFD9542B),
+        'bone' => const Color(0xFFC79A1E),
+        'guarda_sol' => const Color(0xFF2B8FD9),
+        'sombra' => Tokens.copa,
+        _ => Tokens.rioProfundo,
+      };
+
+  static (String, String) labels(CommunityCategory c) {
+    final h = DateTime.now().hour;
+    return switch (c.id) {
+      'agua' => ('Água que você bebeu', 'Antes e depois: conta os ml'),
+      'protetor' => ('Protetor solar às ${h}h', 'Foto aplicando na pele'),
+      'oculos' => ('Óculos de sol', 'Você usando no rosto'),
+      'mascara' => ('Máscara na fumaça', 'Cobrindo nariz e boca'),
+      'bone' => ('Boné ou chapéu', 'Na cabeça, ao ar livre'),
+      'guarda_sol' => ('Guarda-sol', 'Aberto, protegendo do sol'),
+      'sombra' => ('Caminho pela sombra', 'Você na sombra das árvores'),
+      'app_aberto' => ('Print do app aberto', 'Tela inteira, com hora e bateria'),
+      _ => (c.label, ''),
+    };
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = Theme.of(context).textTheme;
+    return LayoutBuilder(builder: (context, box) {
+      final w = (box.maxWidth - 10) / 2;
+      return Wrap(spacing: 10, runSpacing: 10, children: [
+        for (final c in communityCategories)
+          SizedBox(
+            width: w,
+            child: Material(
+              color: _color(c.id).withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(Tokens.radiusControl),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(Tokens.radiusControl),
+                onTap: () => startPublish(context, ref, category: c),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(color: _color(c.id), borderRadius: BorderRadius.circular(10)),
+                      child: Icon(c.icon, color: Colors.white, size: 20),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(labels(c).$1, style: t.labelLarge?.copyWith(fontWeight: FontWeight.w700), maxLines: 2),
+                        Text(labels(c).$2, style: t.labelSmall, maxLines: 2),
+                      ]),
+                    ),
+                  ]),
+                ),
+              ),
+            ),
+          ),
+      ]);
+    });
+  }
 }
 
 /// Selos em vigor (vencedores da semana passada) e a disputa desta semana.
@@ -305,10 +391,10 @@ class _WaterAfterButton extends ConsumerWidget {
 // ---------------- publicar ----------------
 
 /// Escolhe a categoria e envia. Devolve true se algo foi enviado.
-Future<bool> startPublish(BuildContext context, WidgetRef ref) async {
+Future<bool> startPublish(BuildContext context, WidgetRef ref, {CommunityCategory? category}) async {
   if (!await _consent(context, ref)) return false;
   if (!context.mounted) return false;
-  final cat = await showModalBottomSheet<CommunityCategory>(
+  final cat = category ?? await showModalBottomSheet<CommunityCategory>(
     context: context,
     isScrollControlled: true,
     builder: (ctx) => SafeArea(
@@ -324,7 +410,7 @@ Future<bool> startPublish(BuildContext context, WidgetRef ref) async {
                 backgroundColor: Tokens.rio.withValues(alpha: 0.12),
                 child: Icon(c.icon, color: Tokens.rio),
               ),
-              title: Text(c.id == 'agua' ? 'Comprovar água (2 fotos)' : c.label),
+              title: Text(ProofButtons.labels(c).$1),
               subtitle: Text(c.hint),
               isThreeLine: true,
               trailing: const Icon(Icons.add_a_photo_outlined),
@@ -398,8 +484,43 @@ Future<Uint8List?> _capture(BuildContext context, WidgetRef ref, String title) a
   }
 }
 
-Future<String?> _askCaption(BuildContext context, Uint8List photo, String title) {
-  final text = TextEditingController();
+/// Legenda sugerida com a hora, para o protetor ("às 14h") e o print do app.
+String _autoCaption(CommunityCategory c) {
+  final h = DateTime.now().hour;
+  return switch (c.id) {
+    'protetor' => 'Protetor solar passado às ${h}h',
+    'mascara' => 'De máscara contra a fumaça às ${h}h',
+    'app_aberto' => 'ThermoGuia aberto às ${h}h',
+    _ => '',
+  };
+}
+
+Future<Uint8List?> _galleryOnly(BuildContext context, WidgetRef ref) async {
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (d) => AlertDialog(
+      title: const Text('Print do app aberto'),
+      content: const Text(
+        'Tire um print da tela inteira com o ThermoGuia aberto (a hora e a bateria precisam aparecer no topo) '
+        'e escolha esse print na galeria.',
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(d, false), child: const Text('Cancelar')),
+        FilledButton(onPressed: () => Navigator.pop(d, true), child: const Text('Escolher o print')),
+      ],
+    ),
+  );
+  if (ok != true || !context.mounted) return null;
+  try {
+    return await ref.read(communityActionsProvider).takePhoto(fromGallery: true);
+  } catch (_) {
+    if (context.mounted) showMessage(context, 'Não foi possível abrir a galeria. Confira a permissão nos Ajustes do aparelho.');
+    return null;
+  }
+}
+
+Future<String?> _askCaption(BuildContext context, Uint8List photo, String title, {String initial = ''}) {
+  final text = TextEditingController(text: initial);
   return showModalBottomSheet<String>(
     context: context,
     isScrollControlled: true,
@@ -430,9 +551,12 @@ Future<String?> _askCaption(BuildContext context, Uint8List photo, String title)
 }
 
 Future<bool> _publishPhoto(BuildContext context, WidgetRef ref, CommunityCategory c) async {
-  final photo = await _capture(context, ref, c.label);
+  // O print do app vem da galeria; as outras fotos, da câmera ou da galeria.
+  final photo = c.id == 'app_aberto'
+      ? await _galleryOnly(context, ref)
+      : await _capture(context, ref, c.label);
   if (photo == null || !context.mounted) return false;
-  final caption = await _askCaption(context, photo, c.label);
+  final caption = await _askCaption(context, photo, c.label, initial: _autoCaption(c));
   if (caption == null || !context.mounted) return false;
   try {
     await ref.read(communityActionsProvider).publish(c.id, caption, photo);

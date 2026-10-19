@@ -65,7 +65,7 @@ void main() {
     expect(alerts, hasLength(2));
     expect(alerts.first.kind, AirAlertKind.piora);
     expect(alerts.first.at, DateTime(2026, 10, 18, 9));
-    expect(alerts.first.body, contains('PFF2'));
+    expect(alerts.first.body, contains('máscara de proteção'));
     expect(alerts.last.kind, AirAlertKind.melhora);
     expect(alerts.last.at, DateTime(2026, 10, 18, 13));
   });

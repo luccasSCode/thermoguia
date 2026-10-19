@@ -31,6 +31,12 @@ const communityCategories = [
       'Você com o guarda-sol ou guarda-chuva aberto, ao ar livre.'),
   CommunityCategory('oculos', 'Óculos de sol', '+ Usou óculos de sol', Icons.visibility_outlined,
       'Você usando óculos de sol no rosto.'),
+  CommunityCategory('mascara', 'Máscara na fumaça', '+ Usou máscara', Icons.masks_outlined,
+      'Você com a máscara de proteção cobrindo nariz e boca (no queixo ou na mão não vale).'),
+  CommunityCategory('sombra', 'Caminho pela sombra', '+ Andou na sombra', Icons.park_outlined,
+      'Você ao ar livre, na sombra de árvores, toldo ou marquise, com a sombra aparecendo.'),
+  CommunityCategory('app_aberto', 'App aberto hoje', '+ Abriu o ThermoGuia', Icons.phone_iphone,
+      'Print da tela inteira com o ThermoGuia aberto, mostrando a hora e a bateria no topo.'),
 ];
 
 CommunityCategory categoryOf(String id) =>

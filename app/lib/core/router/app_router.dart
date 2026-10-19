@@ -5,9 +5,11 @@ import 'package:go_router/go_router.dart';
 import '../../features/assistant/assistant_screen.dart';
 import '../../features/community/community_screen.dart';
 import '../../features/home/home_screen.dart';
+import '../../features/notifications/notifications_screen.dart';
 import '../../features/profile/premium_screen.dart';
 import '../../features/rewards/club_screen.dart';
 import '../../features/profile/profile_screen.dart';
+import '../../features/profile/settings_screen.dart';
 import '../../features/routes/presentation/map_screen.dart';
 import '../../features/safety/audit_screen.dart';
 import '../../features/safety/contacts_screen.dart';
@@ -45,6 +47,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/historico', builder: (_, __) => const AuditScreen()),
       GoRoute(path: '/planos', builder: (_, __) => const PremiumScreen()),
       GoRoute(path: '/clube', builder: (_, __) => const ClubScreen()),
+      GoRoute(path: '/configuracoes', builder: (_, __) => const SettingsScreen()),
+      GoRoute(path: '/notificacoes', builder: (_, __) => const NotificationsScreen()),
       StatefulShellRoute.indexedStack(
         builder: (_, __, shell) => HomeShell(shell: shell),
         branches: [

@@ -35,6 +35,7 @@ Rotas marcadas com 🔒 exigem `Authorization: Bearer <token>`.
 |---|---|---|
 | GET | `/climate?lat&lng` | `{current, hourly, sun}` (horários em UTC) |
 | GET | `/air?lat&lng` | `{current, hourly}` com `pm25` e `pm10` em µg/m³ (UTC, 72 h). O app calcula o índice CONAMA, a Hora Segura e os alertas de fumaça |
+| GET | `/air/map` | `{points: [{lat, lng, pm25, pm10, index, level}]}`: fumaça agora numa grade sobre a cidade (camada do mapa) |
 | POST | `/routes/fresh` | Ver abaixo |
 | GET | `/geo/search?q=` | Busca de endereços na cidade |
 | GET | `/places/oasis?lat&lng&limit` | Pontos de refresco próximos |
@@ -52,6 +53,10 @@ Rotas marcadas com 🔒 exigem `Authorization: Bearer <token>`.
 }
 ```
 
+`mode`: `foot` (até 12 km), `bike` (até 25 km) ou `moto` (até 40 km; só para o perfil
+entregador, que no app escolhe entre bicicleta e moto). A moto segue as ruas de carro
+(`ROUTING_CAR_URL`), sem desvios por áreas verdes e sem os avisos de lado da calçada.
+
 Resposta: `routes[]` com `label`, `tags`, `recommended`, `distanceM`, `durationS`,
 `shadeScore` (0–1), `sunExposureMin`, `thermalLoad` e `points` como `[lat, lng, sombra]`;
 mais `climate`, `advice` e `greenIndexReady`.
@@ -65,6 +70,11 @@ Cada rota traz também o que o app usa na navegação curva a curva:
   longo sem sombra), `lado_sombra` (árvores ou prédios fazem sombra de um lado da calçada;
   `side` = `esquerdo`/`direito`), `sombra` (trecho arborizado), `refresco` (bebedouro,
   shopping, farmácia... colado no caminho) e relatos da comunidade sobre a rota.
+- `approximate`: `true` quando o mapa a pé/bicicleta não liga origem e destino (ex.: acesso
+  à Ponta Negra) e o caminho foi traçado pelas ruas de carro (`ROUTING_CAR_URL`), com o
+  tempo recalculado para 4,7 km/h a pé ou 15 km/h de bicicleta. Parte do trajeto pode não
+  ter calçada ou ciclovia mapeada. Sem caminho nem assim: `404`; `503` só quando o serviço
+  de rotas está fora do ar.
 
 ## Segurança 🔒
 
@@ -156,3 +166,21 @@ Rotas ativas só com `ADMIN_TOKEN` configurado; sem ele, respondem 404.
 | POST | `/admin/posts/{id}/decide` | `{approve, ml?, reason?}`; na água, aprovar exige os ml |
 | POST | `/admin/posts/{id}/restore` | Devolve ao ar um post denunciado |
 
+
+## Login com Google e Facebook (público)
+
+| Método | Rota | Descrição |
+|---|---|---|
+| GET | `/auth/{google\|facebook}/start?persona=` | Redireciona para a tela de login do provedor |
+| GET | `/auth/{google\|facebook}/callback` | Volta do provedor; redireciona para `thermoguia://auth?token=...` (ou `?error=nao_configurado\|cancelado\|expirado\|falhou`) |
+
+Precisa de `GOOGLE_CLIENT_ID/SECRET` e `FACEBOOK_APP_ID/SECRET` (ver `docs/LOGIN_SOCIAL.md`).
+
+## Acompanhamento do responsável
+
+| Método | Rota | Descrição |
+|---|---|---|
+| GET / POST / DELETE 🔒 | `/guardian/link` | Ver, criar ou desativar o link secreto de acompanhamento (`{url}`) |
+| POST 🔒 | `/emergency/alert` | "Estou passando mal" foi tocado (`{symptoms}`); aparece na hora para o responsável |
+| GET | `/acompanhar/{token}` | Página do responsável: água do dia × meta, último uso e pedidos de ajuda (atualiza a cada 30 s) |
+| GET | `/acompanhar/{token}/status` | Os mesmos dados em JSON |

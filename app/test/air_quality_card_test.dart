@@ -75,15 +75,17 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
+      // Compacto: índice, faixa, o que fazer, as próximas horas e a Hora Segura.
       expect(find.text('Muito ruim'), findsOneWidget);
-      expect(find.textContaining('cigarros'), findsOneWidget);
-      expect(find.textContaining('2,0× mais ar'), findsOneWidget);
-      expect(find.text('Hora Segura:'), findsOneWidget);
-      expect(find.text('15h–17h · 33°'), findsOneWidget);
+      expect(find.textContaining('cigarros/dia'), findsOneWidget);
+      expect(find.text('Hora Segura 15h–17h'), findsOneWidget);
+      expect(find.byIcon(Icons.masks_outlined), findsOneWidget);
 
-      await tester.tap(find.text('Como se proteger da fumaça'));
+      // Os detalhes abrem ao tocar no card.
+      await tester.tap(find.text('Muito ruim'));
       await tester.pumpAndSettle();
       expect(find.text('Fumaça e qualidade do ar'), findsOneWidget);
+      expect(find.textContaining('2,0× mais ar'), findsOneWidget);
     });
   }
 }

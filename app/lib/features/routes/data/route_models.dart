@@ -41,6 +41,7 @@ class RouteOption {
     required this.shade,
     this.maneuvers = const [],
     this.alerts = const [],
+    this.approximate = false,
   });
 
   final String id;
@@ -58,6 +59,10 @@ class RouteOption {
   /// Manobras (vire à direita...) e avisos do caminho, para a navegação.
   final List<Maneuver> maneuvers;
   final List<RouteAlert> alerts;
+
+  /// Traçado pelas ruas de carro porque o mapa a pé/bicicleta não liga os
+  /// pontos: parte do caminho pode não ter calçada ou ciclovia mapeada.
+  final bool approximate;
 
   factory RouteOption.fromJson(Map<String, dynamic> j) {
     final pts = (j['points'] as List).cast<List>();
@@ -79,6 +84,7 @@ class RouteOption {
       alerts: (j['alerts'] as List? ?? const [])
           .map((a) => RouteAlert.fromJson((a as Map).cast<String, dynamic>()))
           .toList(),
+      approximate: j['approximate'] as bool? ?? false,
     );
   }
 }
@@ -115,6 +121,7 @@ enum ReportKind {
   semSombra('sem_sombra', 'Trecho sem sombra'),
   bebedouro('bebedouro', 'Água disponível'),
   calorExtremo('calor_extremo', 'Calor extremo agora'),
+  fumaca('fumaca', 'Fumaça forte aqui'),
   alagamento('alagamento', 'Alagamento'),
   transito('transito', 'Trânsito intenso'),
   obra('obra', 'Obra ou calçada bloqueada');

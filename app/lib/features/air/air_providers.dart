@@ -5,6 +5,7 @@ import 'package:thermo_core/thermo_core.dart';
 
 import '../../core/providers.dart';
 import '../../core/services/location_service.dart';
+import '../../core/services/notification_inbox.dart';
 import '../climate/climate_providers.dart';
 import '../session/presentation/session_controller.dart';
 import 'air_repository.dart';
@@ -53,7 +54,8 @@ final safeWindowsProvider = Provider<List<SafeWindow>>((ref) {
 
 /// Alertas de qualidade do ar (ligados por padrão), salvos no aparelho.
 class AirAlertsSetting extends Notifier<bool> {
-  static const key = 'notif_ar';
+  // Mesma chave do tipo "ar" em Configurações → Notificações.
+  static const key = 'notif_kind_ar';
 
   @override
   bool build() => ref.read(localStoreProvider).getString(key) != '0';
@@ -136,9 +138,39 @@ Future<void> rescheduleAirAlerts(Ref ref) async {
   final plan = planAirAlerts(air.hourly, now: DateTime.now(), persona: ref.read(personaProvider), max: _idCount);
   for (var i = 0; i < plan.length; i++) {
     final a = plan[i];
-    await svc.schedule(_idBase + i, a.at, a.title, a.body, route: '/agora', air: true);
+    await svc.schedule(_idBase + i, a.at, a.title, a.body, route: '/agora', kind: NotifKind.ar);
   }
 }
 
 /// Para widgets: `ref.read(airUpdatedProvider)()`.
 final airUpdatedProvider = Provider((ref) => () => onAirUpdated(ref));
+
+/// Fumaça agora em vários pontos da cidade (camada do mapa da aba Rotas).
+class AirMapPoint {
+  const AirMapPoint(this.lat, this.lng, this.index, this.level);
+  final double lat;
+  final double lng;
+  final int index;
+  final AirLevel level;
+}
+
+final airMapProvider = FutureProvider.autoDispose<List<AirMapPoint>>((ref) async {
+  final data = await ref.read(apiClientProvider).get('/air/map') as Map;
+  return [
+    for (final p in (data['points'] as List).cast<Map>())
+      AirMapPoint(
+        (p['lat'] as num).toDouble(),
+        (p['lng'] as num).toDouble(),
+        (p['index'] as num).toInt(),
+        AirLevel.fromName(p['level'] as String?),
+      ),
+  ];
+});
+
+/// "na zona Norte", "no Centro"... pela posição em relação ao centro da cidade.
+String zoneOf(double lat, double lng, {double centerLat = -3.1190, double centerLng = -60.0217}) {
+  final dLat = lat - centerLat, dLng = lng - centerLng;
+  if (dLat.abs() < 0.03 && dLng.abs() < 0.03) return 'no Centro';
+  if (dLat.abs() >= dLng.abs()) return dLat > 0 ? 'na zona Norte' : 'na zona Sul';
+  return dLng > 0 ? 'na zona Leste' : 'na zona Oeste';
+}

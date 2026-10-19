@@ -64,6 +64,27 @@ CREATE TABLE IF NOT EXISTS emergency_contacts (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
+-- Acompanhamento pelo responsável (perfil idoso): um link secreto mostra a
+-- água do dia e os pedidos de ajuda, sem precisar de conta.
+CREATE TABLE IF NOT EXISTS guardian_links (
+  user_id    uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  token      text NOT NULL UNIQUE,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS help_alerts (
+  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  symptoms   jsonb NOT NULL DEFAULT '[]'::jsonb,
+  lat        double precision,
+  lng        double precision,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS help_alerts_user ON help_alerts (user_id, created_at DESC);
+
+-- Login social: o mesmo usuário entra pelo Google ou pelo Facebook.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS google_sub text UNIQUE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS facebook_id text UNIQUE;
+
 CREATE TABLE IF NOT EXISTS community_reports (
   id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id    uuid REFERENCES users(id) ON DELETE SET NULL,
@@ -79,7 +100,7 @@ CREATE INDEX IF NOT EXISTS reports_geo ON community_reports (lat, lng);
 -- Tipos aceitos (recriada a cada inicialização para incluir tipos novos).
 ALTER TABLE community_reports DROP CONSTRAINT IF EXISTS community_reports_kind_check;
 ALTER TABLE community_reports ADD CONSTRAINT community_reports_kind_check
-  CHECK (kind IN ('sombra_boa','sem_sombra','bebedouro','calor_extremo','alagamento','transito','obra'));
+  CHECK (kind IN ('sombra_boa','sem_sombra','bebedouro','calor_extremo','alagamento','transito','obra','fumaca'));
 
 CREATE TABLE IF NOT EXISTS ai_usage (
   user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -171,7 +192,7 @@ CREATE INDEX IF NOT EXISTS coupons_user ON reward_coupons (user_id, created_at D
 CREATE TABLE IF NOT EXISTS posts (
   id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id       uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  category      text NOT NULL CHECK (category IN ('agua','bone','protetor','guarda_sol','oculos')),
+  category      text NOT NULL,
   caption       text NOT NULL DEFAULT '',
   -- aguardando_depois (prova de água em andamento), verificando, revisao, aprovado, recusado
   status        text NOT NULL,
@@ -183,6 +204,10 @@ CREATE TABLE IF NOT EXISTS posts (
   created_at    timestamptz NOT NULL DEFAULT now(),
   verified_at   timestamptz
 );
+-- Categorias aceitas (a lista cresceu: máscara, sombra e print do app aberto).
+ALTER TABLE posts DROP CONSTRAINT IF EXISTS posts_category_check;
+ALTER TABLE posts ADD CONSTRAINT posts_category_check
+  CHECK (category IN ('agua','bone','protetor','guarda_sol','oculos','mascara','sombra','app_aberto'));
 CREATE INDEX IF NOT EXISTS posts_feed ON posts (status, created_at DESC);
 CREATE INDEX IF NOT EXISTS posts_user ON posts (user_id, created_at DESC);
 

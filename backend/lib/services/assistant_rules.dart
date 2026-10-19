@@ -194,6 +194,8 @@ class RuleResponder {
     if (p.has(r'dormir|noite quente|casa (quente|abafada)|quarto|ventilador|em casa|refrescar a casa')) score('casa', 5);
     if (p.has(r'comer|comida|aliment|fruta|lanche|almoco|cafe|bebida alcool|cerveja|refrigerante|energetico')) score('comida', 4);
     if (p.has(r'thermoguia\+|thermoguia plus|\bplano|assinatura|assinar|premium|quanto custa|preco|limite de perguntas')) score('planos', 5);
+    if (p.has(r'fumaca|queimad|qualidade do ar|poluic|polui|mascara|cheiro de (queimado|fumaca)|respirar|\bar (esta|ta|vai) (ruim|pesado|sujo|melhorar)|\bpm ?2|asma|bronquite|olhos?.{0,20}ard|garganta|nevoa|neblina|cinza no ar|fuligem|cigarro|abrir (as )?janelas?|hora segura')) score('fumaca', 6);
+    if (p.has(r'\bsombra|arvore|arborizad|lado da rua|sombreado')) score('sombra', 4);
     if (p.has(r'(como|quanto) (esta|ta) (o )?(calor|tempo|clima)|temperatura|sensacao|risco (de )?agora|ta quente|esta quente|que calor')) score('agora', 3);
 
     if (scores.isEmpty) return _fallback();
@@ -216,6 +218,7 @@ class RuleResponder {
       {'sinais', 'emergencia'},
       {'pet', 'atividade', 'melhor_horario'},
       {'sol', 'melhor_horario', 'mais_quente'},
+      {'fumaca', 'casa', 'agora_vs_depois', 'atividade'},
     ];
     return groups.any((g) => g.contains(a) && g.contains(b));
   }
@@ -242,6 +245,8 @@ class RuleResponder {
         'casa' => _casa(),
         'comida' => _comida(),
         'agora' => _agora(),
+        'fumaca' => _fumaca(p),
+        'sombra' => _sombra(),
         'planos' => 'Os planos e o que cada um inclui estão em Perfil > Planos. No ThermoGuia+ o assistente não tem limite de perguntas por dia.',
         _ => _dica(),
       };
@@ -553,6 +558,45 @@ class RuleResponder {
     final recs = c.risk.recommendations.take(2).map((r) => r.message).join(' ');
     return 'Minha dica para agora (risco $lvl, sensação de ~$feels°C): ${recs.isEmpty ? 'mantenha a água em dia e prefira a sombra.' : recs}'
         '${_bestWindow.isEmpty ? '' : ' Se puder escolher, saia $_bestWindow.'}';
+  }
+
+  String _fumaca(ParsedQuestion p) {
+    final a = c.airNow;
+    if (a == null) {
+      return 'Agora não consegui a medição da fumaça. Com cheiro de queimado no ar, use máscara de proteção na rua, '
+          'evite esforço e mantenha as janelas fechadas.';
+    }
+    final advice = c.airAdvice!;
+    final cig = cigarettesFor(a.pm25);
+    final safe = c.safeWindows;
+    DateTime? clears;
+    if (a.level.isBad) {
+      for (final h in c.airHourly) {
+        if (h.time.isAfter(now.time) && !h.level.isBad) {
+          clears = h.time;
+          break;
+        }
+      }
+    }
+    final parts = <String>[
+      'A qualidade do ar está ${a.level.label.toLowerCase()} agora (índice ${a.index}). '
+          '${cig >= 0.5 ? 'Respirar esse ar o dia todo equivale a ${cig.toStringAsFixed(1).replaceAll('.', ',')} cigarros. ' : ''}'
+          '${advice.message}',
+      if (a.level.isBad && clears != null) 'A previsão é de melhora ${_when(clears)}.',
+      if (a.level.isBad && clears == null) 'Não há previsão de melhora nas próximas horas.',
+      if (safe.isNotEmpty) 'Hora Segura para sair: ${safe.map((w) => w.rangeLabel).join(' e ')}.',
+      if (p.has(r'casa|janela|dormir|quarto'))
+        'Em casa: janelas fechadas enquanto o ar estiver ruim, pano úmido nas frestas e ventilador ligado. Abra tudo quando o app avisar que o ar melhorou.',
+    ];
+    return parts.join(' ');
+  }
+
+  String _sombra() {
+    final a = c.airNow;
+    final smoke = a != null && a.level.isBad;
+    return 'A sombra das árvores deixa a calçada até 10 °C mais fresca e é o que as Rotas Frescas procuram: '
+        'abra a aba Rotas e eu escolho o caminho mais sombreado para o horário em que você vai passar. '
+        '${smoke ? 'Atenção: hoje a fumaça cobre a cidade inteira e a sombra não filtra o ar. Use máscara de proteção mesmo nas ruas arborizadas.' : 'Nas horas de sol forte, ande pelo lado da rua com sombra.'}';
   }
 
   String _fallback() => 'Não tenho certeza se entendi. Eu ajudo com o calor do seu dia: '

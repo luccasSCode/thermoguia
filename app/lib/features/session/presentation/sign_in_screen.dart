@@ -6,6 +6,7 @@ import 'package:thermo_core/thermo_core.dart';
 import '../../../core/widgets/common.dart';
 import 'persona_picker.dart';
 import 'session_controller.dart';
+import 'social_sign_in.dart';
 import '../../../core/widgets/thermo_loader.dart';
 
 class SignInScreen extends ConsumerStatefulWidget {
@@ -109,6 +110,14 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 onPressed: () => setState(() => _register = !_register),
                 child: Text(_register ? 'Já tenho conta' : 'Criar uma conta com e-mail'),
               ),
+              const SizedBox(height: 16),
+              Row(children: [
+                const Expanded(child: Divider()),
+                Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: Text('ou', style: t.bodyMedium)),
+                const Expanded(child: Divider()),
+              ]),
+              const SizedBox(height: 16),
+              SocialSignInButtons(persona: _register ? _persona : null),
             ],
           ),
         ),

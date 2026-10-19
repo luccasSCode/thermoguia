@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'network/api_client.dart';
 import 'services/audit_logger.dart';
 import 'services/location_service.dart';
+import 'services/notification_inbox.dart';
 import 'services/notification_service.dart';
 import 'services/voice_guide.dart';
 import 'storage/local_store.dart';
@@ -14,7 +15,10 @@ final sharedPrefsProvider = Provider<SharedPreferences>((_) => throw Unimplement
 final localStoreProvider = Provider((ref) => LocalStore(ref.watch(sharedPrefsProvider)));
 final apiClientProvider = Provider((ref) => ApiClient(ref.watch(localStoreProvider)));
 final locationServiceProvider = Provider((_) => LocationService());
-final notificationServiceProvider = Provider((_) => NotificationService());
+final notificationInboxProvider = ChangeNotifierProvider((ref) => NotificationInbox(ref.watch(localStoreProvider)));
+final notificationServiceProvider = Provider(
+  (ref) => NotificationService(ref.watch(localStoreProvider), ref.watch(notificationInboxProvider.notifier)),
+);
 final auditLoggerProvider = Provider(
   (ref) => AuditLogger(ref.watch(localStoreProvider), ref.watch(apiClientProvider)),
 );

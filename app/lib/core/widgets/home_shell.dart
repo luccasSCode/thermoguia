@@ -46,6 +46,8 @@ class _HomeShellState extends ConsumerState<HomeShell> with WidgetsBindingObserv
   }
 
   Future<void> _onOpen() async {
+    // Programadas que já tocaram com o app fechado entram no sino.
+    await ref.read(notificationInboxProvider).collectDue();
     await ref.read(rewardsProvider.notifier).checkIn();
     await ref.read(engagementSchedulerProvider)();
   }

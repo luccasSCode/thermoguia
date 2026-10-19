@@ -1,4 +1,8 @@
+import 'package:flutter/services.dart';
+import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:thermo_core/thermo_core.dart';
+
+import '../../../core/config/app_config.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/storage/local_store.dart';
@@ -42,6 +46,37 @@ class AuthRepository {
         'password': password,
         'persona': persona.name,
       }));
+
+  /// Login com Google ou Facebook pelo navegador seguro do sistema. O servidor
+  /// conduz o OAuth e volta para `thermoguia://auth` com o token de sessão.
+  /// Devolve null se a pessoa fechar a tela de login.
+  Future<AppUser?> socialLogin(String provider, String brand, {Persona? persona}) async {
+    final start = Uri.parse('${AppConfig.apiUrl}/auth/$provider/start')
+        .replace(queryParameters: {if (persona != null) 'persona': persona.name});
+    final String result;
+    try {
+      result = await FlutterWebAuth2.authenticate(url: start.toString(), callbackUrlScheme: 'thermoguia');
+    } on PlatformException catch (e) {
+      if (e.code == 'CANCELED') return null;
+      throw ApiException('Não foi possível abrir o login com $brand.');
+    } catch (_) {
+      // Sem navegador de login disponível (plugin ausente, aparelho sem suporte).
+      throw ApiException('Não foi possível abrir o login com $brand.');
+    }
+    final q = Uri.parse(result).queryParameters;
+    final token = q['token'];
+    if (token == null) {
+      throw ApiException(switch (q['error']) {
+        'nao_configurado' => 'O login com $brand ainda não foi ativado no servidor do ThermoGuia. '
+            'Por enquanto, toque em "Começar" ou entre com seu e-mail.',
+        'cancelado' => 'Login com $brand cancelado.',
+        'expirado' => 'O login demorou demais. Tente de novo.',
+        _ => 'Não foi possível entrar com $brand. Tente de novo.',
+      });
+    }
+    await _store.setToken(token);
+    return me();
+  }
 
   Future<AppUser> me() async => _cache(await _api.get('/me'));
 

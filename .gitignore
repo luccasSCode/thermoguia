@@ -25,3 +25,6 @@ app/macos/
 *.jks
 *.keystore
 key.properties
+
+# macOS
+.DS_Store

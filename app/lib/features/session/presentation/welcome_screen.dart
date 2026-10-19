@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/widgets/common.dart';
 import '../../../core/widgets/leaf_animation.dart';
+import 'signup_layout.dart';
 import 'social_sign_in.dart';
 
 class WelcomeScreen extends StatelessWidget {
@@ -17,91 +17,67 @@ class WelcomeScreen extends StatelessWidget {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
       child: Scaffold(
-        body: LayoutBuilder(
-          // Rola só em telas baixas.
-          builder: (context, box) => SingleChildScrollView(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: box.maxHeight),
-              child: IntrinsicHeight(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Ilustração de Manaus no topo, por trás da barra de status.
-                    const AspectRatio(
-                      aspectRatio: 1170 / 780,
-                      child: Image(
-                        image: AssetImage('assets/illustrations/signup_header.png'),
-                        fit: BoxFit.cover,
-                        excludeFromSemantics: true,
-                      ),
-                    ),
-                    Expanded(
-                      child: Padding(
-                        padding: EdgeInsets.fromLTRB(24, 24, 24, 24 + insets.bottom),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Semantics(
-                              header: true,
-                              label: 'Thermo Guia',
-                              child: ExcludeSemantics(
-                                child: Row(children: [
-                                  LeafAnimation(size: (t.displaySmall?.fontSize ?? 36) * 2),
-                                  const SizedBox(width: 4),
-                                  Expanded(child: Text('Thermo Guia', style: t.displaySmall)),
-                                ]),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Text('Atravesse Manaus pela sombra.', style: t.titleMedium?.copyWith(fontSize: 24)),
-                            const SizedBox(height: 12),
-                            SizedBox(
-                              width: double.infinity,
-                              child: Text(
-                                'O ThermoGuia acompanha o calor onde você está, sugere caminhos mais '
-                                'frescos e avisa a hora de beber água.',
-                                textAlign: TextAlign.center,
-                                style: t.bodyLarge,
-                              ),
-                            ),
-                            const SizedBox(height: 32),
-                            // Divide o espaço que sobra: 1 parte acima dos botões, 2 abaixo.
-                            const Spacer(),
-                            FilledButton(
-                              onPressed: () => context.go('/comecar'),
-                              child: const Center(child: Text('Começar')),
-                            ),
-                            const SizedBox(height: 12),
-                            OutlinedButton(
-                              onPressed: () => context.go('/entrar'),
-                              child: const Center(child: Text('Já tenho conta')),
-                            ),
-                            const SizedBox(height: 20),
-                            Row(children: [
-                              const Expanded(child: Divider()),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
-                                child: Text('ou', style: t.bodyMedium),
-                              ),
-                              const Expanded(child: Divider()),
-                            ]),
-                            const SizedBox(height: 20),
-                            // Os SDKs de login social ainda não estão configurados: o toque explica isso.
-                            SocialSignInButtons(
-                              onPressed: (p) => showMessage(
-                                context,
-                                'O login com ${p.brand} chega em breve. Por enquanto, toque em '
-                                '"Começar" ou entre com seu e-mail.',
-                              ),
-                            ),
-                            const Spacer(flex: 2),
-                          ],
+        body: SignupLayout(
+          // A ilustração fica por trás da barra de status e nunca some de todo.
+          minHeaderHeight: insets.top + 48,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(24, 16, 24, 16 + insets.bottom),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Semantics(
+                  header: true,
+                  label: 'Thermo Guia',
+                  child: ExcludeSemantics(
+                    child: Row(children: [
+                      LeafAnimation(size: (t.displaySmall?.fontSize ?? 36) * 1.5),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text('Thermo Guia', maxLines: 1, style: t.displaySmall),
                         ),
                       ),
-                    ),
-                  ],
+                    ]),
+                  ),
                 ),
-              ),
+                const SizedBox(height: 8),
+                Text(
+                  'Atravesse Manaus pela sombra e longe da fumaça.',
+                  textAlign: TextAlign.center,
+                  style: t.titleMedium?.copyWith(fontSize: 22),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'O ThermoGuia acompanha o calor e a fumaça onde você está, sugere caminhos '
+                  'mais frescos, avisa quando usar máscara e a hora de beber água.',
+                  textAlign: TextAlign.center,
+                  style: t.bodyMedium,
+                ),
+                const SizedBox(height: 20),
+                FilledButton(
+                  onPressed: () => context.go('/comecar'),
+                  child: const Text('Começar'),
+                ),
+                const SizedBox(height: 10),
+                OutlinedButton(
+                  onPressed: () => context.go('/entrar'),
+                  child: const Text('Já tenho conta'),
+                ),
+                const SizedBox(height: 12),
+                Row(children: [
+                  const Expanded(child: Divider()),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Text('ou', style: t.bodyMedium),
+                  ),
+                  const Expanded(child: Divider()),
+                ]),
+                const SizedBox(height: 12),
+                // Só ilustrativos por enquanto: levam ao cadastro, como o Começar.
+                SocialSignInButtons(onPressed: () => context.go('/comecar')),
+              ],
             ),
           ),
         ),

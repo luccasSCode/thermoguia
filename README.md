@@ -45,6 +45,9 @@ posição do sol. O resultado fica em cache por 30 dias.
 **Sem Docker:** crie o banco `thermoguia` no PostgreSQL, ajuste `DB_*` no `.env` e rode
 `cd backend && dart pub get && dart run bin/server.dart`. As tabelas são criadas sozinhas.
 
+**Login com Google e Facebook:** os botões já funcionam assim que as credenciais forem
+cadastradas no servidor. Passo a passo em [docs/LOGIN_SOCIAL.md](docs/LOGIN_SOCIAL.md).
+
 **Sem chave de IA:** o assistente funciona com o motor de regras local. Para usar o Claude,
 crie uma chave em https://console.anthropic.com e coloque em `ANTHROPIC_API_KEY`.
 
@@ -62,6 +65,23 @@ localização e notificação, habilita o desugaring exigido pelas notificaçõe
 
 `10.0.2.2` é o endereço do seu computador visto pelo emulador Android. Em um celular
 físico, use o IP do computador na rede (ex.: `http://192.168.0.10:8080`).
+
+### APK para instalar num celular
+
+O endereço da API fica gravado no APK na hora de compilar. Use o IP do computador
+na rede Wi-Fi (no macOS: `ipconfig getifaddr en0`); celular e computador precisam estar
+na mesma rede:
+
+```bash
+cd app
+dart run tool/setup_platforms.dart   # só na primeira vez (ou depois de clonar)
+flutter build apk --release --dart-define=API_URL=http://192.168.0.10:8080
+```
+
+O APK sai em `app/build/app/outputs/flutter-apk/app-release.apk`. Instale com o celular
+no USB (`flutter install --release`) ou envie o arquivo para o celular e abra. Se o IP do
+computador mudar, gere o APK de novo. Para usar fora da rede de casa, hospede a API com
+HTTPS e use esse endereço no `API_URL`.
 
 ## 3. Testes
 

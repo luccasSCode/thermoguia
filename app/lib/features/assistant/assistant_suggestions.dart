@@ -4,11 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:thermo_core/thermo_core.dart';
 
+import '../air/air_providers.dart';
 import '../climate/climate_providers.dart';
 import '../session/presentation/session_controller.dart';
 
 /// Quando uma sugestão faz mais sentido.
-enum When { sempre, dia, noite, chuva, calorForte }
+enum When { sempre, dia, noite, chuva, calorForte, fumaca }
 
 class Suggestion {
   const Suggestion(this.text, this.icon, {this.personas = const {}, this.when = When.sempre});
@@ -47,15 +48,42 @@ const suggestionBank = <Suggestion>[
   Suggestion('Vou andar 8 km hoje. Qual o melhor horário?', Icons.markunread_mailbox_outlined,
       personas: {Persona.carteiro, Persona.pedestre}),
   Suggestion('Me dá uma dica rápida para hoje', Icons.tips_and_updates_outlined),
+  // Sol e sombra.
+  Suggestion('Qual lado da rua tem mais sombra agora?', Icons.park_outlined, when: When.dia),
+  Suggestion('Andar pela sombra faz quanta diferença no calor?', Icons.forest_outlined),
+  Suggestion('Preciso passar protetor solar agora?', Icons.sanitizer_outlined, when: When.dia),
+  Suggestion('Até que horas o sol está forte hoje?', Icons.wb_sunny_outlined, when: When.dia),
+  // Fumaça das queimadas.
+  Suggestion('Como está a fumaça agora?', Icons.air),
+  Suggestion('Preciso usar máscara para sair hoje?', Icons.masks_outlined, when: When.fumaca),
+  Suggestion('Quando a qualidade do ar vai melhorar?', Icons.update, when: When.fumaca),
+  Suggestion('Posso abrir as janelas de casa agora?', Icons.window_outlined, when: When.fumaca),
+  Suggestion('Rua arborizada protege da fumaça?', Icons.park_outlined, when: When.fumaca),
+  Suggestion('Respirar essa fumaça equivale a quantos cigarros?', Icons.smoking_rooms_outlined, when: When.fumaca),
+  Suggestion('Meus olhos e garganta estão ardendo. O que faço?', Icons.visibility_outlined, when: When.fumaca),
+  Suggestion('Dá para pedalar com essa fumaça?', Icons.directions_bike, personas: {Persona.ciclista}, when: When.fumaca),
+  Suggestion('Como proteger uma pessoa idosa da fumaça?', Icons.elderly, personas: {Persona.idoso}, when: When.fumaca),
+  Suggestion('Trabalho na rua o dia todo. Como me proteger da fumaça?', Icons.masks_outlined,
+      personas: {Persona.entregador, Persona.vendedor, Persona.carteiro}, when: When.fumaca),
+  Suggestion('Qual a Hora Segura para sair hoje?', Icons.verified_user_outlined),
 ];
 
 /// Situação atual, para ordenar as sugestões.
 class SuggestionContext {
-  const SuggestionContext({required this.persona, required this.night, required this.rain, required this.hot});
+  const SuggestionContext({
+    required this.persona,
+    required this.night,
+    required this.rain,
+    required this.hot,
+    this.smoke = false,
+  });
   final Persona persona;
   final bool night;
   final bool rain;
   final bool hot;
+
+  /// Ar ruim ou pior agora ou nas próximas horas.
+  final bool smoke;
 
   bool fits(When w) => switch (w) {
         When.sempre => true,
@@ -63,6 +91,7 @@ class SuggestionContext {
         When.noite => night,
         When.chuva => rain,
         When.calorForte => hot,
+        When.fumaca => smoke,
       };
 }
 
@@ -78,6 +107,7 @@ final suggestionContextProvider = Provider<SuggestionContext>((ref) {
     night: night,
     rain: rain,
     hot: risk != null && risk.level.index >= RiskLevel.alto.index,
+    smoke: ref.watch(airProvider).valueOrNull?.next(12).any((h) => h.level.isBad) ?? false,
   );
 });
 
@@ -87,7 +117,11 @@ List<Suggestion> pickSuggestions(SuggestionContext ctx, {required int count, int
   final rnd = math.Random(seed);
   final pool = suggestionBank.where((s) => !skip.contains(s.text) && ctx.fits(s.when)).toList()..shuffle(rnd);
   int rank(Suggestion s) =>
-      (s.personas.contains(ctx.persona) ? 4 : 0) + (s.when != When.sempre ? 2 : 0) - (s.personas.isNotEmpty && !s.personas.contains(ctx.persona) ? 3 : 0);
+      (s.personas.contains(ctx.persona) ? 4 : 0) +
+      (s.when != When.sempre ? 2 : 0) +
+      // No período de fumaça, as perguntas sobre o ar vêm primeiro.
+      (s.when == When.fumaca ? 3 : 0) -
+      (s.personas.isNotEmpty && !s.personas.contains(ctx.persona) ? 3 : 0);
   // Na primeira tela, o que é do perfil vem antes; nas trocas, mistura mais.
   pool.sort((a, b) => seed == 0 ? rank(b).compareTo(rank(a)) : (rank(b).clamp(-1, 1)).compareTo(rank(a).clamp(-1, 1)));
   return pool.take(count).toList();

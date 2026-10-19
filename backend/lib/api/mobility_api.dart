@@ -36,6 +36,12 @@ void registerMobilityRoutes(Router r, AppDeps d) {
     return jsonResponse(bundle.toJson());
   });
 
+  /// Fumaça agora em vários pontos da cidade do usuário (mapa da aba Rotas).
+  r.get('/air/map', (Request req) async {
+    final city = await _cityOf(d, req);
+    return jsonResponse({'points': await d.air.grid(city.bounds)});
+  });
+
   r.post('/routes/fresh', (Request req) async {
     final b = await readJson(req);
     final city = await _cityOf(d, req);
@@ -44,7 +50,11 @@ void registerMobilityRoutes(Router r, AppDeps d) {
     _ensureInside(city, origin);
     _ensureInside(city, dest);
 
-    final mode = b['mode'] == 'bike' ? 'bike' : 'foot';
+    final mode = switch (b['mode']) {
+      'bike' => 'bike',
+      'moto' => 'moto',
+      _ => 'foot',
+    };
     final departAt = DateTime.tryParse('${b['departAt']}')?.toUtc() ?? DateTime.now().toUtc();
     final profile = await d.profiles.get(userIdOf(req));
     final shadePref = (b['shadePreference'] as num?)?.toDouble() ?? profile.shadePreference;
@@ -153,5 +163,5 @@ void registerMobilityRoutes(Router r, AppDeps d) {
 }
 
 abstract final class ReportKinds {
-  static const all = {'sombra_boa', 'sem_sombra', 'bebedouro', 'calor_extremo', 'alagamento', 'transito', 'obra'};
+  static const all = {'sombra_boa', 'sem_sombra', 'bebedouro', 'calor_extremo', 'alagamento', 'transito', 'obra', 'fumaca'};
 }

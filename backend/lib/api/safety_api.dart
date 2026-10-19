@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 
@@ -55,6 +57,22 @@ void registerSafetyRoutes(Router r, AppDeps d) {
 
     if (!approved || action != 'share_location' || lat == null || lng == null) {
       return jsonResponse({'logged': true});
+    }
+    // Localização compartilhada com aprovação: o responsável vê no link de acompanhamento.
+    // Completa o pedido de ajuda aberto há pouco, em vez de criar outro.
+    final params = {'u': userIdOf(req), 's': jsonEncode(b['symptoms'] ?? const []), 'lat': lat, 'lng': lng};
+    final updated = await d.db.query(
+      '''UPDATE help_alerts SET lat = @lat, lng = @lng, symptoms = CAST(@s AS jsonb)
+         WHERE id = (SELECT id FROM help_alerts WHERE user_id = CAST(@u AS uuid)
+                     AND created_at > now() - interval '15 minutes' ORDER BY created_at DESC LIMIT 1)
+         RETURNING id''',
+      params,
+    );
+    if (updated.isEmpty) {
+      await d.db.query(
+        'INSERT INTO help_alerts (user_id, symptoms, lat, lng) VALUES (CAST(@u AS uuid), CAST(@s AS jsonb), @lat, @lng)',
+        params,
+      );
     }
     final user = await d.users.byId(userIdOf(req));
     final name = (user?['name'] as String?)?.isNotEmpty == true ? user!['name'] : 'Uma pessoa';

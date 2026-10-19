@@ -12,6 +12,10 @@ final routesRepositoryProvider = Provider(
   (ref) => RoutesRepository(ref.watch(apiClientProvider), ref.watch(localStoreProvider)),
 );
 
+/// Meios de transporte da aba Rotas para cada perfil: o entregador faz as
+/// entregas de bicicleta ou de moto; os outros, a pé ou de bicicleta.
+List<String> travelModesFor(Persona p) => p == Persona.entregador ? const ['bike', 'moto'] : const ['foot', 'bike'];
+
 class RoutesState {
   const RoutesState({
     this.destination,
@@ -59,8 +63,8 @@ class RoutesState {
 class RoutesController extends Notifier<RoutesState> {
   @override
   RoutesState build() {
-    final persona = ref.read(personaProvider);
-    return RoutesState(mode: persona == Persona.ciclista ? 'bike' : 'foot');
+    final persona = ref.watch(personaProvider);
+    return RoutesState(mode: persona == Persona.ciclista ? 'bike' : travelModesFor(persona).first);
   }
 
   void setDestination(Place p) {

@@ -20,7 +20,6 @@ class AirQualityCard extends ConsumerWidget {
     final air = ref.watch(airProvider).valueOrNull;
     final advice = ref.watch(airAdviceProvider);
     if (air == null || advice == null) return const SizedBox.shrink();
-    final persona = ref.watch(personaProvider);
     final windows = ref.watch(safeWindowsProvider);
     final sun = context.sunMode;
     final level = air.current.level;
@@ -28,14 +27,13 @@ class AirQualityCard extends ConsumerWidget {
     final t = Theme.of(context).textTheme;
     final scheme = Theme.of(context).colorScheme;
     final day = cigarettesFor(air.current.pm25);
-    final hour = cigarettesFor(air.current.pm25, hours: 1, breathing: breathingFactor(persona));
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(12, 16, 12, 0),
+      margin: const EdgeInsets.fromLTRB(12, 10, 12, 0),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(Tokens.radiusSheet),
+        borderRadius: BorderRadius.circular(Tokens.radiusBlock),
         color: sun ? Colors.white : null,
-        border: sun ? Border.all(color: Colors.black, width: 2) : Border.all(color: color.withValues(alpha: 0.5)),
+        border: sun ? Border.all(color: Colors.black, width: 2) : null,
         gradient: sun
             ? null
             : LinearGradient(
@@ -47,57 +45,43 @@ class AirQualityCard extends ConsumerWidget {
       child: Material(
         type: MaterialType.transparency,
         child: InkWell(
-          borderRadius: BorderRadius.circular(Tokens.radiusSheet),
+          borderRadius: BorderRadius.circular(Tokens.radiusBlock),
           onTap: () => showAirDetails(context),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+            padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(children: [
-                  Icon(Icons.air, color: color),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text('Qualidade do ar', style: t.titleMedium)),
-                  if (air.stale) Icon(Icons.history, size: 18, color: scheme.outline),
-                ]),
-                const SizedBox(height: 4),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '${air.current.index}',
-                      style: t.displayMedium?.copyWith(height: 1, color: color, fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: 4),
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text(level.label, style: t.titleLarge?.copyWith(color: color)),
-                          Text('Fumaça (PM2.5): ${air.current.pm25.round()} µg/m³', style: t.bodySmall),
-                        ]),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                _AdviceRow(advice: advice, color: color),
-                if (day >= 0.5) ...[
-                  const SizedBox(height: 12),
-                  _CigaretteRow(day: day, hour: hour, persona: persona),
-                ],
-                const SizedBox(height: 14),
-                _ForecastStrip(air: air),
-                const SizedBox(height: 12),
-                _SafeHours(windows: windows),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton(
-                    style: TextButton.styleFrom(padding: EdgeInsets.zero),
-                    onPressed: () => showAirDetails(context),
-                    child: const Text('Como se proteger da fumaça'),
+                  Text(
+                    '${air.current.index}',
+                    style: t.displaySmall?.copyWith(height: 1, color: color, fontWeight: FontWeight.w700, letterSpacing: -1),
                   ),
-                ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('Qualidade do ar${air.stale ? ' (salva)' : ''}', style: t.labelLarge),
+                      Text(level.label, style: t.titleMedium?.copyWith(color: color, fontWeight: FontWeight.w700)),
+                    ]),
+                  ),
+                  if (advice.mask)
+                    Tooltip(message: 'Use máscara de proteção', child: Icon(Icons.masks_outlined, color: color, size: 28)),
+                  Icon(Icons.chevron_right, color: scheme.outline),
+                ]),
+                const SizedBox(height: 6),
+                Text(advice.title, style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                _ForecastStrip(air: air),
+                const SizedBox(height: 8),
+                Row(children: [
+                  if (day >= 0.5) ...[
+                    Icon(Icons.smoking_rooms_outlined, size: 16, color: scheme.onSurfaceVariant),
+                    const SizedBox(width: 4),
+                    Text('≈ ${_n(day)} cigarros/dia', style: t.labelMedium),
+                    const SizedBox(width: 12),
+                  ],
+                  Expanded(child: _SafeHours(windows: windows)),
+                ]),
               ],
             ),
           ),
@@ -187,10 +171,8 @@ class _ForecastStrip extends StatelessWidget {
       label: 'Previsão da qualidade do ar nas próximas 24 horas',
       child: ExcludeSemantics(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Próximas 24 horas', style: t.labelLarge),
-          const SizedBox(height: 6),
           SizedBox(
-            height: 44,
+            height: 26,
             child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
               for (final h in hours)
                 Expanded(
@@ -232,28 +214,18 @@ class _SafeHours extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    if (windows.isEmpty) {
-      return Row(children: [
-        const Icon(Icons.shield_outlined, size: 20),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text('Sem Hora Segura nas próximas 24h: se precisar sair, use PFF2.', style: t.bodyMedium),
+    final none = windows.isEmpty;
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Icon(none ? Icons.shield_outlined : Icons.verified_user_outlined, size: 16, color: none ? null : Tokens.copa),
+      const SizedBox(width: 4),
+      Flexible(
+        child: Text(
+          none ? 'Sem Hora Segura hoje' : 'Hora Segura ${windows.map((w) => w.rangeLabel).join(', ')}',
+          style: t.labelMedium,
+          overflow: TextOverflow.ellipsis,
         ),
-      ]);
-    }
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: [
-        Text('Hora Segura:', style: t.titleSmall),
-        for (final w in windows)
-          Chip(
-            avatar: const Icon(Icons.verified_user_outlined, size: 18, color: Tokens.copa),
-            label: Text('${w.rangeLabel} · ${w.feelsC.round()}°'),
-          ),
-      ],
-    );
+      ),
+    ]);
   }
 }
 
@@ -280,14 +252,35 @@ class _AirDetails extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
     final sun = context.sunMode;
-    final current = ref.watch(airProvider).valueOrNull?.current.level;
+    final air = ref.watch(airProvider).valueOrNull;
+    final current = air?.current.level;
+    final advice = ref.watch(airAdviceProvider);
+    final persona = ref.watch(personaProvider);
     final alerts = ref.watch(airAlertsSettingProvider);
     return ListView(
       controller: scroll,
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
       children: [
         Text('Fumaça e qualidade do ar', style: t.titleLarge),
-        const SizedBox(height: 8),
+        if (air != null && advice != null) ...[
+          const SizedBox(height: 4),
+          Text('Agora: índice ${air.current.index} · fumaça (PM2.5) ${air.current.pm25.round()} µg/m³', style: t.bodySmall),
+          const SizedBox(height: 14),
+          _AdviceRow(advice: advice, color: Tokens.air(advice.level, sunMode: sun)),
+          if (cigarettesFor(air.current.pm25) >= 0.5) ...[
+            const SizedBox(height: 12),
+            _CigaretteRow(
+              day: cigarettesFor(air.current.pm25),
+              hour: cigarettesFor(air.current.pm25, hours: 1, breathing: breathingFactor(persona)),
+              persona: persona,
+            ),
+          ],
+          const SizedBox(height: 14),
+          Text('Próximas 24 horas', style: t.labelLarge),
+          const SizedBox(height: 6),
+          _ForecastStrip(air: air),
+          const SizedBox(height: 20),
+        ],
         Text(
           'Na época das queimadas, a fumaça cobre Manaus inteira, até as áreas arborizadas. '
           'O ThermoGuia mede as partículas finas (PM2.5), que entram fundo no pulmão, e '
@@ -329,7 +322,7 @@ class _AirDetails extends ConsumerWidget {
         Text('Como se proteger', style: t.titleMedium),
         const SizedBox(height: 8),
         const _Tip(Icons.masks_outlined,
-            'Máscara PFF2 (ou N95) filtra a fumaça; a de pano e a cirúrgica, não. Ajuste bem no nariz.'),
+            'Use máscara de proteção, a mais grossa que veda bem o rosto (vendida em farmácia para fumaça). A de pano e a cirúrgica não filtram a fumaça.'),
         const _Tip(Icons.window_outlined,
             'Com ar ruim, feche janelas e portas. Abra quando o ThermoGuia avisar que o ar melhorou.'),
         const _Tip(Icons.water_drop_outlined, 'Beba mais água: ajuda a aliviar a garganta e os olhos.'),

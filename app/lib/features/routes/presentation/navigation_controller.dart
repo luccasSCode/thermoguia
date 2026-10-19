@@ -109,13 +109,13 @@ class NavigationController extends Notifier<NavState?> {
   DateTime _lastReroute = DateTime.fromMillisecondsSinceEpoch(0);
   final _spoken = <String>{};
 
-  bool get _foot => ref.read(tripProvider)?.mode != 'bike';
+  String get _mode => ref.read(tripProvider)?.mode ?? 'foot';
 
-  // Distâncias de aviso: a pé se anda ~1,3 m/s; de bicicleta, ~4 m/s.
-  double get _farM => _foot ? 60 : 160;
-  double get _nearM => _foot ? 15 : 35;
-  double get _alertAheadM => _foot ? 40 : 110;
-  double get _offRouteM => _foot ? 35 : 45;
+  // Distâncias de aviso: a pé se anda ~1,3 m/s; de bicicleta, ~4 m/s; de moto, ~9 m/s.
+  double get _farM => switch (_mode) { 'moto' => 300, 'bike' => 160, _ => 60 };
+  double get _nearM => switch (_mode) { 'moto' => 60, 'bike' => 35, _ => 15 };
+  double get _alertAheadM => switch (_mode) { 'moto' => 220, 'bike' => 110, _ => 40 };
+  double get _offRouteM => switch (_mode) { 'moto' => 50, 'bike' => 45, _ => 35 };
 
   @override
   NavState? build() {

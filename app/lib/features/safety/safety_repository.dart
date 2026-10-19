@@ -33,6 +33,13 @@ class SafetyRepository {
 
   Future<void> removeContact(String id) => _api.delete('/emergency/contacts/$id');
 
+  /// "Estou passando mal" foi tocado: o responsável vê na hora no link de acompanhamento.
+  Future<void> helpAlert({List<String> symptoms = const []}) async {
+    try {
+      await _api.post('/emergency/alert', {'symptoms': symptoms});
+    } catch (_) {/* sem conexão: o fluxo de emergência continua no aparelho */}
+  }
+
   /// Registra a decisão no servidor. Sem conexão, guarda no log local
   /// para sincronizar depois.
   Future<Map<String, dynamic>> logEvent({

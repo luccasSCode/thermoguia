@@ -5,11 +5,13 @@ import 'package:thermo_core/thermo_core.dart';
 
 import '../../core/providers.dart';
 import '../../core/theme/theme_mode.dart';
+import '../../core/theme/tokens.dart';
 import '../../core/widgets/common.dart';
 import '../adaptive/adaptive_controller.dart';
-import '../air/air_providers.dart';
 import '../adaptive/sun_mode.dart';
-import '../notifications/engagement.dart';
+import '../climate/climate_providers.dart';
+import '../outdoor/outdoor_session_controller.dart';
+import '../safety/guardian.dart';
 import 'app_icon_setting.dart';
 import 'avatar.dart';
 import '../session/presentation/persona_picker.dart';
@@ -25,12 +27,20 @@ class ProfileScreen extends ConsumerWidget {
     final profile = ref.watch(adaptiveProvider);
     final sun = ref.watch(sunModeSettingProvider);
     final theme = ref.watch(themeSettingProvider);
-    final notif = ref.watch(engagementSettingsProvider);
     final t = Theme.of(context).textTheme;
     if (user == null) return const SizedBox.shrink();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Perfil')),
+      appBar: AppBar(
+        title: const Text('Perfil'),
+        actions: [
+          TextButton.icon(
+            icon: const Icon(Icons.settings_outlined),
+            label: const Text('Configurações'),
+            onPressed: () => context.push('/configuracoes'),
+          ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.only(bottom: 40),
         children: [
@@ -94,6 +104,12 @@ class ProfileScreen extends ConsumerWidget {
                 onPressed: () => _addCredentials(context, ref),
               ),
             ),
+          if (user.persona == Persona.idoso) const GuardianCard(),
+          if (canChooseAppIcon && !ref.watch(appIconChosenProvider)) ...[
+            const SectionTitle('Escolha o ícone do app'),
+            const AppIconPicker(),
+          ],
+          const _OutdoorMode(),
           const SectionTitle('Como você se desloca'),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -137,31 +153,6 @@ class ProfileScreen extends ConsumerWidget {
               ],
             ),
           ),
-          const SectionTitle('Notificações'),
-          SwitchListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 20),
-            title: const Text('Alertas de fumaça e qualidade do ar'),
-            subtitle: const Text('Quando usar máscara, fechar as janelas e quando o ar fica bom para sair'),
-            value: ref.watch(airAlertsSettingProvider),
-            onChanged: (on) => ref.read(airAlertsSettingProvider.notifier).set(on),
-          ),
-          for (final e in Engagement.values)
-            SwitchListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 20),
-              title: Text(e.title),
-              subtitle: Text(e.when),
-              value: notif.contains(e),
-              onChanged: (on) => ref.read(engagementSettingsProvider.notifier).toggle(e, on),
-            ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
-            child: Text(
-              'As notificações programadas nunca chegam entre 19h30 e 6h30, e são no máximo 4 por dia. '
-              'Os alertas de fumaça são urgentes e podem chegar das 6h às 22h. '
-              'Os lembretes de água continuam quando você liga "Estou na rua agora".',
-              style: t.bodySmall,
-            ),
-          ),
           const SectionTitle('Aparência'),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -188,8 +179,6 @@ class ProfileScreen extends ConsumerWidget {
               ],
             ),
           ),
-          const SectionTitle('Ícone do app'),
-          const AppIconPicker(),
           const SectionTitle('Modo Sol Forte'),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -216,29 +205,14 @@ class ProfileScreen extends ConsumerWidget {
               ],
             ),
           ),
-          const SectionTitle('Segurança e privacidade'),
+          const SectionTitle('Segurança'),
+          if (user.persona != Persona.idoso) ...[const GuardianCard(), const SizedBox(height: 8)],
           ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 20),
             leading: const Icon(Icons.contact_emergency_outlined),
             title: const Text('Contatos de emergência'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/contatos'),
-          ),
-          ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 20),
-            leading: const Icon(Icons.history),
-            title: const Text('Histórico de decisões'),
-            subtitle: const Text('Tudo o que você aprovou ou recusou'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push('/historico'),
-          ),
-          ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 20),
-            leading: const Icon(Icons.water_drop_outlined),
-            title: const Text('Clube H2O'),
-            subtitle: const Text('Suas gotas, cupons e descontos'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push('/clube'),
           ),
           ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 20),
@@ -370,4 +344,28 @@ class _OneLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
       FittedBox(fit: BoxFit.scaleDown, child: Text(text, maxLines: 1, softWrap: false));
+}
+
+/// "Estou na rua agora": conta o tempo ao sol e liga os lembretes de água.
+class _OutdoorMode extends ConsumerWidget {
+  const _OutdoorMode();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = ref.watch(outdoorSessionProvider);
+    final risk = ref.watch(riskProvider);
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const SectionTitle('Na rua'),
+      SwitchListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+        secondary: Icon(Icons.directions_walk, color: s.active ? Tokens.copa : null),
+        value: s.active,
+        onChanged: (_) => ref.read(outdoorSessionProvider.notifier).toggle(),
+        title: const Text('Estou na rua agora'),
+        subtitle: Text(s.active && risk != null
+            ? 'Contando seu tempo ao sol. Lembrete de água a cada ${risk.hydrationIntervalMin} min.'
+            : 'Hoje: ${s.minutesToday} min ao sol. Ative para receber lembretes de água.'),
+      ),
+    ]);
+  }
 }

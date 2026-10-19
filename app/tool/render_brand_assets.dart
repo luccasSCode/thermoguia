@@ -58,6 +58,10 @@ void main() {
       await _png('$res/drawable-nodpi/ic_launcher_alt_monochrome.png', 432,
           LeafIconPainter(silhouette: true, contentScale: _adaptive));
 
+      // Notificações do Android: folha branca na barra de status e o ícone do app ao lado do texto.
+      await _png('$res/drawable-nodpi/ic_notification.png', 96, LeafIconPainter(silhouette: true));
+      await _png('$res/drawable-nodpi/ic_notification_large.png', 256, LeafIconPainter());
+
       // Tela de abertura nativa vazia: a animação da folha começa logo em seguida.
       await _png('$b/splash_blank.png', 1152, _Blank());
     });

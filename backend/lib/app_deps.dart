@@ -47,7 +47,7 @@ class AppDeps {
   late final green = {for (final c in cities) c.id: GreenIndexService(config, client, c)};
   late final routing = {for (final c in cities) c.id: RoutingService(config, client, green[c.id]!)};
   late final assistants = {
-    for (final c in cities) c.id: AssistantService(claude, weather, green[c.id]!),
+    for (final c in cities) c.id: AssistantService(claude, weather, green[c.id]!, air),
   };
 
   static Future<AppDeps> create() async {
