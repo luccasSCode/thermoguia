@@ -7,7 +7,8 @@
 //  1. flutter create (gera android/ e ios/ se ainda não existirem)
 //  2. copia o AndroidManifest (permissões e os três ícones), a MainActivity
 //     que troca o ícone e os ícones alternativos (platform/android)
-//  3. habilita o "desugaring" exigido pelas notificações locais
+//  3. habilita o "desugaring" exigido pelas notificações locais e desliga o
+//     R8 no release (ele apaga código que os plugins chamam por JNI: tela preta)
 //  4. adiciona as descrições de permissão no Info.plist do iOS
 //  5. gera os ícones (com as variantes Escuro e Tingido) e a tela de abertura
 //
@@ -64,8 +65,10 @@ void _patchGradle() {
     return;
   }
   var s = file.readAsStringSync();
-  if (s.contains('desugar_jdk_libs')) return;
   final isKts = file == kts;
+  s = _noShrink(s, isKts);
+  file.writeAsStringSync(s);
+  if (s.contains('desugar_jdk_libs')) return;
   final flag = isKts ? 'isCoreLibraryDesugaringEnabled = true' : 'coreLibraryDesugaringEnabled true';
   if (s.contains('compileOptions {')) {
     s = s.replaceFirst('compileOptions {', 'compileOptions {\n        $flag');
@@ -125,3 +128,16 @@ String _ensurePhotoKeys(String s) {
   return s;
 }
 
+/// Desliga o R8 (encolhimento e ofuscação) no release. Plugins como o
+/// shared_preferences chamam código Kotlin por JNI pelo nome; o R8 apaga ou
+/// renomeia essas classes e o app trava ao abrir, com a tela preta.
+String _noShrink(String s, bool isKts) {
+  if (s.contains('isMinifyEnabled') || s.contains('minifyEnabled')) return s;
+  final flags = isKts
+      ? 'isMinifyEnabled = false\n            isShrinkResources = false'
+      : 'minifyEnabled false\n            shrinkResources false';
+  final release = RegExp(r'release\s*\{');
+  if (!release.hasMatch(s)) return s;
+  stdout.writeln('✓ R8 desligado no release (evita tela preta ao abrir)');
+  return s.replaceFirstMapped(release, (m) => '${m[0]}\n            $flags');
+}

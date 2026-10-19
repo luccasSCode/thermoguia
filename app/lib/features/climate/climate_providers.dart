@@ -33,6 +33,10 @@ class ClimateController extends AsyncNotifier<ClimateData> {
 
   @override
   Future<ClimateData> build() async {
+    // O Modo Sol lê o clima já na abertura; sem conta o servidor recusa (401) e
+    // o erro ficaria na tela inicial. Espera o login e busca de novo quando ele chega.
+    final signedIn = ref.watch(sessionProvider.select((s) => s.status == SessionStatus.signedIn));
+    if (!signedIn) return Completer<ClimateData>().future;
     final loc = await ref.watch(userLocationProvider.future);
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(minutes: 10), (_) => refresh(silent: true));
