@@ -12,7 +12,6 @@ import '../adaptive/sun_mode.dart';
 import '../climate/climate_providers.dart';
 import '../outdoor/outdoor_session_controller.dart';
 import '../safety/guardian.dart';
-import 'app_icon_setting.dart';
 import 'avatar.dart';
 import '../session/presentation/persona_picker.dart';
 import '../session/presentation/session_controller.dart';
@@ -105,10 +104,6 @@ class ProfileScreen extends ConsumerWidget {
               ),
             ),
           if (user.persona == Persona.idoso) const GuardianCard(),
-          if (canChooseAppIcon && !ref.watch(appIconChosenProvider)) ...[
-            const SectionTitle('Escolha o ícone do app'),
-            const AppIconPicker(),
-          ],
           const _OutdoorMode(),
           const SectionTitle('Como você se desloca'),
           Padding(
@@ -216,10 +211,11 @@ class ProfileScreen extends ConsumerWidget {
           ),
           ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 20),
-            leading: const Icon(Icons.workspace_premium_outlined),
-            title: Text(user.isPlus ? 'ThermoGuia+ ativo' : 'Planos'),
+            leading: const Icon(Icons.volunteer_activism_outlined),
+            title: const Text('Apoie o ThermoGuia'),
+            subtitle: const Text('Doe e ajude a plantar árvores em Manaus'),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push('/planos'),
+            onTap: () => context.push('/apoiar'),
           ),
           const Divider(height: 32),
           ListTile(
@@ -332,7 +328,7 @@ class ProfileScreen extends ConsumerWidget {
   }
 }
 
-/// Usado pelo Perfil para registrar interesse em planos.
+/// Registra o interesse em doar (e, antes, em planos).
 Future<void> logPlanInterest(WidgetRef ref, String plan) =>
     ref.read(auditLoggerProvider).log('interesse_plano', details: {'plano': plan});
 

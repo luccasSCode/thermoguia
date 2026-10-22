@@ -6,7 +6,7 @@ import '../../features/assistant/assistant_screen.dart';
 import '../../features/community/community_screen.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/notifications/notifications_screen.dart';
-import '../../features/profile/premium_screen.dart';
+import '../../features/profile/donate_screen.dart';
 import '../../features/rewards/club_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/profile/settings_screen.dart';
@@ -45,7 +45,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/entrar', builder: (_, __) => const SignInScreen()),
       GoRoute(path: '/contatos', builder: (_, __) => const ContactsScreen()),
       GoRoute(path: '/historico', builder: (_, __) => const AuditScreen()),
-      GoRoute(path: '/planos', builder: (_, __) => const PremiumScreen()),
+      GoRoute(path: '/apoiar', builder: (_, __) => const DonateScreen()),
       GoRoute(path: '/clube', builder: (_, __) => const ClubScreen()),
       GoRoute(path: '/configuracoes', builder: (_, __) => const SettingsScreen()),
       GoRoute(path: '/notificacoes', builder: (_, __) => const NotificationsScreen()),

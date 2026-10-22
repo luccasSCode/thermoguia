@@ -84,7 +84,12 @@ void main() {
       expect(r.answer('estou com tontura e dor de cabeça'), contains('192'));
     });
     test('saudação usa o primeiro nome', () => expect(r.answer('oi'), startsWith('Oi, Ana!')));
-    test('fora do tema não despeja dados', () => expect(r.answer('quem ganhou o jogo ontem?'), startsWith('Não tenho certeza')));
+    test('fora do tema volta ao calor sem dizer que não entendeu', () {
+      final a = r.answer('quem ganhou o jogo ontem?');
+      expect(a, isNot(contains('entendi')));
+      expect(a, contains('sensação'));
+      expect(a, contains('qualidade do ar'));
+    });
   });
 
   group('toda sugestão do app tem resposta concreta', () {
@@ -111,11 +116,47 @@ void main() {
       'Fico vendendo no sol por 6 horas. Quanto de água preciso?',
       'Vou andar 8 km hoje. Qual o melhor horário?',
       'Me dá uma dica rápida para hoje',
+      'Qual a sensação térmica agora?',
+      'Qual o índice UV agora?',
+      'Como saber se estou desidratado?',
+      'Ventilador ajuda mesmo no calor forte?',
     ]) {
       test(q, () {
         final a = r.answer(q);
-        expect(a, isNot(startsWith('Não tenho certeza')));
+        expect(a, isNot(startsWith('Eu acompanho o calor')));
         expect(a, isNot(TopicGuard.reply));
+      });
+    }
+  });
+
+  group('calor de Manaus, previsão e fumaça têm resposta própria', () {
+    final smoky = RuleResponder(_ctx(smoke: true));
+    for (final (q, expected) in [
+      ('Por que Manaus é tão quente e abafada?', 'linha do Equador'),
+      ('O que é a ilha de calor na cidade?', 'ilha de calor'),
+      ('Quais bairros esquentam mais em Manaus?', 'asfalto'),
+      ('A umidade alta piora a sensação de calor?', 'umidade'),
+      ('Qual vai ser a temperatura máxima hoje?', 'máxima'),
+      ('Como vai estar o tempo amanhã?', 'Amanhã'),
+      ('Vai chover forte hoje? Tem risco de alagamento?', 'alagamento'),
+      ('Até que horas vai fazer calor hoje?', '°C'),
+      ('Por que tem tanta fumaça em Manaus?', 'queimadas'),
+      ('De onde vem a fumaça das queimadas?', 'queimadas'),
+      ('Quando acaba a temporada de queimadas?', 'chuvas'),
+      ('Qual máscara protege da fumaça?', 'veda bem'),
+      ('Máscara de pano protege da fumaça?', 'pano'),
+      ('Como denunciar uma queimada?', '0800'),
+      ('Quem tem asma pode sair com essa fumaça?', 'asma'),
+      ('A fumaça faz mal para crianças?', 'Crianças'),
+      ('Posso fazer exercício ao ar livre com fumaça?', 'exercício'),
+      ('A chuva ajuda a limpar a fumaça?', 'chuva'),
+      ('Como limpar o ar dentro de casa?', 'casa'),
+    ]) {
+      test(q, () {
+        final a = smoky.answer(q);
+        expect(a, contains(expected));
+        expect(a, isNot(startsWith('Eu acompanho o calor')));
+        expect(a, isNot(contains('PFF2')));
       });
     }
   });
@@ -172,6 +213,22 @@ void main() {
         expect(smoky.answer(q), contains('qualidade do ar'), reason: q);
       }
       expect(smoky.answer('Qual lado da rua tem mais sombra agora?'), contains('sombra'));
+    });
+    test('erro de digitação e pergunta de horário: responde quando o ar melhora', () {
+      for (final q in ['Que horas ir ficar sem fumaa em Manaus?', 'que hrs a fumasa vai embora?', 'quando o ar fica sem fumaça?']) {
+        final a = smoky.answer(q);
+        expect(a, startsWith('O ar deve ficar sem fumaça forte às 15h'), reason: q);
+        expect(a, contains('Hora Segura'), reason: q);
+        expect(a, isNot(contains('entendi')), reason: q);
+      }
+      expect(r.answer('Que horas ir ficar sem fumaa em Manaus?'), startsWith('Agora o ar já está sem fumaça forte'));
+    });
+    test('pergunta sem assunto conhecido fala de calor, fumaça, chuva e sol', () {
+      final a = smoky.answer('me conta algo sobre hoje');
+      for (final part in ['Calor:', 'Fumaça:', 'Chuva:', 'Sol:']) {
+        expect(a, contains(part));
+        expect(smoky.answer('oi'), contains(part));
+      }
     });
     test('ar limpo → pode sair', () {
       expect(r.answer('a qualidade do ar está boa?'), contains('boa'));

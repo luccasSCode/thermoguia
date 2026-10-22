@@ -18,15 +18,54 @@ class AssistantScreen extends ConsumerStatefulWidget {
 class _AssistantScreenState extends ConsumerState<AssistantScreen> {
   final _input = TextEditingController();
   final _scroll = ScrollController();
+  final _home = ScrollController();
 
   /// Muda a cada toque em "Outras ideias" e a cada resposta, para variar as sugestões.
   int _seed = 0;
+
+  /// Perguntas carregadas ao rolar a tela inicial, depois das 6 primeiras.
+  final _more = <Suggestion>[];
+  int _page = 0;
+  bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _home.addListener(() {
+      if (_home.hasClients && _home.position.extentAfter < 400) _loadMore();
+    });
+  }
 
   @override
   void dispose() {
     _input.dispose();
     _scroll.dispose();
+    _home.dispose();
     super.dispose();
+  }
+
+  /// Rolagem infinita: carrega mais 6 perguntas (calor e fumaça alternados).
+  /// Quando acabam as inéditas, recomeça o banco em outra ordem.
+  Future<void> _loadMore() async {
+    if (_loading) return;
+    setState(() => _loading = true);
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+    if (!mounted) return;
+    final ctx = ref.read(suggestionContextProvider);
+    final first = pickSuggestions(ctx, count: 6, seed: _seed);
+    final recent = _more.length > 12 ? _more.sublist(_more.length - 12) : _more;
+    final shown = {for (final s in [...first, ..._more]) s.text};
+    var next = moreSuggestions(ctx, page: ++_page, skip: shown);
+    if (next.isEmpty) next = moreSuggestions(ctx, page: _page, skip: {for (final s in [...first, ...recent]) s.text});
+    setState(() {
+      _more.addAll(next);
+      _loading = false;
+    });
+  }
+
+  void _resetFeed() {
+    _more.clear();
+    _page = 0;
   }
 
   void _close() {
@@ -47,12 +86,18 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
 
   void _newConversation() {
     ref.read(assistantProvider.notifier).newConversation();
-    setState(() => _seed++);
+    setState(() {
+      _seed++;
+      _resetFeed();
+    });
   }
 
   void _send(String text) {
     _input.clear();
-    setState(() => _seed++);
+    setState(() {
+      _seed++;
+      _resetFeed();
+    });
     ref.read(assistantProvider.notifier).send(text);
   }
 
@@ -103,26 +148,15 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
           Expanded(
             child: s.messages.isEmpty
                 ? ListView(
+                    controller: _home,
                     padding: const EdgeInsets.all(20),
                     children: [
-                      Text('Pergunte sobre o calor de agora', style: t.headlineSmall),
+                      Text('Pergunte sobre o calor e a fumaça', style: t.headlineSmall),
                       const SizedBox(height: 8),
                       Text(
-                        'Eu uso o clima do seu local, seu perfil, a água que você já bebeu e o tempo ao sol de hoje.',
+                        'Eu uso o clima e a qualidade do ar do seu local, seu perfil, a água que você já bebeu '
+                        'e o tempo ao sol de hoje.',
                         style: t.bodyLarge,
-                      ),
-                      const SizedBox(height: 20),
-                      _SuggestionGrid(
-                        items: pickSuggestions(ctx, count: 6, seed: _seed),
-                        onTap: (q) => _send(q),
-                      ),
-                      const SizedBox(height: 8),
-                      Center(
-                        child: TextButton.icon(
-                          icon: const Icon(Icons.autorenew),
-                          label: const Text('Outras ideias'),
-                          onPressed: () => setState(() => _seed++),
-                        ),
                       ),
                       if (s.history.isNotEmpty) ...[
                         const SizedBox(height: 12),
@@ -140,6 +174,31 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
                             onTap: () => ref.read(assistantProvider.notifier).open(c.id),
                           ),
                       ],
+                      const SizedBox(height: 16),
+                      Row(children: [
+                        Expanded(child: Text('Perguntas prontas', style: t.titleMedium)),
+                        TextButton.icon(
+                          icon: const Icon(Icons.autorenew),
+                          label: const Text('Outras ideias'),
+                          onPressed: () => setState(() {
+                            _seed++;
+                            _resetFeed();
+                          }),
+                        ),
+                      ]),
+                      const SizedBox(height: 8),
+                      _SuggestionGrid(
+                        items: [...pickSuggestions(ctx, count: 6, seed: _seed), ..._more],
+                        onTap: (q) => _send(q),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        child: Center(
+                          child: _loading
+                              ? const ThermoLoader.inline()
+                              : TextButton(onPressed: _loadMore, child: const Text('Mais perguntas')),
+                        ),
+                      ),
                     ],
                   )
                 : ListView.builder(
@@ -192,10 +251,14 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
           if (s.remaining == 0)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: TextButton(
-                onPressed: () => context.push('/planos'),
-                child: const Text('Conhecer o ThermoGuia+ (assistente sem limite)'),
-              ),
+              child: Column(children: [
+                Text('Você usou todas as perguntas de hoje. Amanhã tem mais!',
+                    style: t.bodyMedium, textAlign: TextAlign.center),
+                TextButton(
+                  onPressed: () => context.push('/apoiar'),
+                  child: const Text('Apoie o ThermoGuia'),
+                ),
+              ]),
             ),
           SafeArea(
             top: false,

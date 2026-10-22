@@ -76,9 +76,10 @@ class SocialService {
       throw ApiError(429, 'Você já publicou $maxPostsPerDay fotos hoje. Volte amanhã!');
     }
     final (mime, sha, hash) = await _checkImage(userId, photo, strictOwn: true);
-    final id = await _repo.createPost(userId, c.id, _caption(caption), 'verificando');
+    final cap = _caption(caption);
+    final id = await _repo.createPost(userId, c.id, cap, 'verificando');
     await _repo.addImage(id, 'foto', photo, mime, sha, hash);
-    unawaited(_run(id, () => _verify.verifyPost(c, photo, mime)));
+    unawaited(_run(id, () => _verify.verifyPost(c, photo, mime, caption: cap)));
     return (await _repo.post(id))!;
   }
 
@@ -113,7 +114,7 @@ class SocialService {
     final cap = _caption(caption);
     if (cap.isNotEmpty) await _repo.setCaption(postId, cap);
     await _repo.setStatus(postId, 'verificando');
-    unawaited(_run(postId, () => _verify.verifyWater(before!['image'] as List<int>, photo, mime, elapsed: elapsed)));
+    unawaited(_run(postId, () => _verify.verifyWater(before!['image'] as List<int>, photo, mime, elapsed: elapsed, caption: cap)));
     return (await _repo.post(postId))!;
   }
 

@@ -107,6 +107,8 @@ class HourlyPoint {
     required this.humidity,
     required this.uvIndex,
     required this.precipitationProb,
+    this.precipitationMm = 0,
+    this.weatherCode,
   });
 
   final DateTime time;
@@ -115,12 +117,20 @@ class HourlyPoint {
   final double uvIndex;
   final double precipitationProb;
 
+  /// Chuva prevista na hora, em milímetros (0 em respostas antigas da API).
+  final double precipitationMm;
+
+  /// Código do tempo da OMM (95-99 = trovoada). Nulo em respostas antigas.
+  final int? weatherCode;
+
   factory HourlyPoint.fromJson(Map<String, dynamic> j) => HourlyPoint(
         time: DateTime.parse(j['time'] as String),
         temperatureC: _d(j['temperatureC']),
         humidity: _d(j['humidity']),
         uvIndex: _d(j['uvIndex']),
         precipitationProb: _d(j['precipitationProb']),
+        precipitationMm: _d(j['precipitationMm']),
+        weatherCode: (j['weatherCode'] as num?)?.toInt(),
       );
 
   Map<String, dynamic> toJson() => {
@@ -129,6 +139,8 @@ class HourlyPoint {
         'humidity': humidity,
         'uvIndex': uvIndex,
         'precipitationProb': precipitationProb,
+        'precipitationMm': precipitationMm,
+        if (weatherCode != null) 'weatherCode': weatherCode,
       };
 
   HourlyPoint withTime(DateTime t) => HourlyPoint(
@@ -137,6 +149,8 @@ class HourlyPoint {
         humidity: humidity,
         uvIndex: uvIndex,
         precipitationProb: precipitationProb,
+        precipitationMm: precipitationMm,
+        weatherCode: weatherCode,
       );
 }
 

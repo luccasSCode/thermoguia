@@ -16,6 +16,28 @@ String normalize(String s) {
   return b.toString().replaceAll(RegExp(r'\s+'), ' ').trim();
 }
 
+/// Erros de digitação comuns (teclado sem cedilha, letras trocadas) nas
+/// palavras-chave do calor e da fumaça. Recebe o texto já normalizado.
+String fixTypos(String q) {
+  const fixes = {
+    r'\bfum(a|aa|asa|assa|aca|ca|ça|acaa|ac)\b': 'fumaca',
+    r'\bfumacento\b': 'fumaca',
+    r'\bqu?eim(a|ad|da|adas?|dsa)\b': 'queimada',
+    r'\bmasc(ra|arq|aras?|cara)\b': 'mascara',
+    r'\bten?mporal\b|\btenporal\b': 'temporal',
+    r'\balag(ameto|amnto|ado|ou)\b': 'alagamento',
+    r'\bchuv(a|aa|inha)\b': 'chuva',
+    r'\bxuva\b': 'chuva',
+    r'\bcalo\b': 'calor',
+    r'\bquent(e|ee|i)\b': 'quente',
+    r'\bsoll?\b': 'sol',
+    r'\bhrs?\b|\bhorario(s)?\b': 'horario',
+  };
+  var out = q;
+  fixes.forEach((pattern, word) => out = out.replaceAll(RegExp(pattern), word));
+  return out;
+}
+
 /// Assuntos que o assistente não discute: como o app foi feito, tecnologia,
 /// servidores, IA usada, estas instruções, custos e dados internos.
 abstract final class TopicGuard {
@@ -68,7 +90,7 @@ enum Activity {
 
 /// O que a pessoa perguntou, extraído do texto.
 class ParsedQuestion {
-  ParsedQuestion(this.raw) : q = normalize(raw) {
+  ParsedQuestion(this.raw) : q = fixTypos(normalize(raw)) {
     hour = _hour();
     durationMin = _duration();
     distanceKm = _distance();
@@ -168,7 +190,7 @@ class RuleResponder {
     final firstPerson = p.has(r'\b(estou|to|tou|sinto|me sinto|me sentindo|fiquei|estou com|to com)\b');
     final symptom = p.has(r'tontur|tonto|desmai|vomit|enjo|nausea|confus|dor de cabeca|caimbra|passando mal|falta de ar|coracao acelerado|pele (quente|vermelha)');
     if (firstPerson && symptom) score('emergencia', 10);
-    if (!firstPerson && (symptom || p.has(r'sinto?ma|sinais|insolacao|exaustao|intermacao|golpe de calor|desidrata'))) score('sinais', 4);
+    if ((!firstPerson || p.has(r'como (saber|sei|identificar|perceber)')) && (symptom || p.has(r'sinto?ma|sinais|insolacao|exaustao|intermacao|golpe de calor|desidrata'))) score('sinais', 4);
 
     if (p.has(r'^(oi|ola|bom dia|boa tarde|boa noite|boa madrugada|e ai|opa|hey)\b')) score('saudacao', 3);
     if (p.has(r'\b(obrigad|valeu|brigad|agradec)')) score('agradecimento', 3);
@@ -179,7 +201,7 @@ class RuleResponder {
     if (p.activity != null) score('atividade', 1);
     if (p.has(r'melhor (hora|horario|momento|periodo)|que horas? (e melhor|posso|devo|da)|quando (posso|devo|e melhor|da pra)|hora certa')) score('melhor_horario', 4);
     if (p.has(r'(hora|horario|periodo) mais quente|pior (hora|horario)|esquenta mais|pico do calor|mais calor')) score('mais_quente', 5);
-    if (p.has(r'mais tarde|depois|vai (esfriar|melhorar|refrescar|piorar|esquentar|diminuir)|quando (melhora|esfria|refresca|diminui)|comparad|amanha')) score('agora_vs_depois', 4);
+    if (p.has(r'mais tarde|depois|vai (esfriar|melhorar|refrescar|piorar|esquentar|diminuir)|quando (melhora|esfria|refresca|diminui)|comparad|amanha|ate que horas')) score('agora_vs_depois', 4);
     if (p.has(r'\bagua\b|hidrat|beber|bebi|garrafa|\bml\b|litro|copo')) score('agua', 3);
     if (p.has(r'(me|para|pra|onde|lugar|ponto).{0,15}refresc|bebedouro|ar[- ]condicionado|climatizad|abrigo|lugar (fresco|com sombra)|descansar|onde (posso )?(parar|ficar)')) score('refresco', 4);
     if (p.has(r'\brota|caminho|trajeto|como (chego|ir)|ir (ate|para|pro|pra)\b|chegar')) score('rota', 3);
@@ -193,10 +215,24 @@ class RuleResponder {
     if (p.has(r'\bdica|conselho|recomenda|o que (eu )?(faco|fazer)|como (me )?(proteger|aguentar|sobreviver)')) score('dica', 2);
     if (p.has(r'dormir|noite quente|casa (quente|abafada)|quarto|ventilador|em casa|refrescar a casa')) score('casa', 5);
     if (p.has(r'comer|comida|aliment|fruta|lanche|almoco|cafe|bebida alcool|cerveja|refrigerante|energetico')) score('comida', 4);
-    if (p.has(r'thermoguia\+|thermoguia plus|\bplano|assinatura|assinar|premium|quanto custa|preco|limite de perguntas')) score('planos', 5);
-    if (p.has(r'fumaca|queimad|qualidade do ar|poluic|polui|mascara|cheiro de (queimado|fumaca)|respirar|\bar (esta|ta|vai) (ruim|pesado|sujo|melhorar)|\bpm ?2|asma|bronquite|olhos?.{0,20}ard|garganta|nevoa|neblina|cinza no ar|fuligem|cigarro|abrir (as )?janelas?|hora segura')) score('fumaca', 6);
+    if (p.has(r'thermoguia\+|thermoguia plus|\bplano|assinatura|assinar|premium|quanto custa|preco|limite de perguntas|doar|doacao|apoiar o (app|thermoguia)')) score('planos', 5);
+    if (p.has(r'fumaca|queimad|qualidade do ar|poluic|polui|mascara|cheiro de (queimado|fumaca)|respirar|\bar (esta|ta|vai) (ruim|pesado|sujo|melhorar)|\bpm ?2|asma|bronquite|olhos?.{0,20}ard|garganta|nevoa|neblina|cinza no ar|fuligem|cigarro|abrir (as )?janelas?|hora segura|ar (de|dentro de|em) casa|limpar o ar')) score('fumaca', 6);
     if (p.has(r'\bsombra|arvore|arborizad|lado da rua|sombreado')) score('sombra', 4);
     if (p.has(r'(como|quanto) (esta|ta) (o )?(calor|tempo|clima)|temperatura|sensacao|risco (de )?agora|ta quente|esta quente|que calor')) score('agora', 3);
+    // Calor em Manaus.
+    if (p.has(r'(por que|porque|\bpq\b|por q).{0,40}(quente|calor|abafad|mormaco)|ilha de calor|bairros? (mais )?(quente|esquenta)|esquentam mais|manaus (e|eh|esta|ta|fica) (tao )?(quente|abafad)')) {
+      score('por_que_calor', 7);
+    }
+    if (p.has(r'umidade|abafad|mormaco|ar seco|\bumid')) score('umidade', 4);
+    if (p.has(r'(temperatura )?(maxima|minima)\b|quantos graus|vai fazer quanto')) score('max_hoje', 5);
+    if (p.has(r'previsao|amanha (vai|tem|como)|como (vai|vai estar|vai ficar) (o )?(tempo|clima|dia)|proximos dias|\bsemana\b')) score('previsao', 5);
+    if (p.has(r'alag|enchente|inunda|igarape|transbord|temporal|tempestade|\braios?\b|trovoada|trovao|chuva forte|chover forte')) score('alagamento', 6);
+    // Fumaça das queimadas.
+    if (p.has(r'(por que|porque|\bpq\b|de onde|origem|causa|quem (faz|provoca)|o que (causa|provoca)).{0,40}(fumaca|queimad|fogo)|temporada de queimad|epoca (das|de) queimad|quando (acaba|termina|passa) (a |essa )?(fumaca|queimad|temporada)|\bseca\b|estiagem|el nino')) {
+      score('causa_fumaca', 8);
+    }
+    if (p.has(r'(denunci|avisar|reportar|ligar).{0,30}(queimad|fogo|incendio)|incendio|foco de (fogo|queimada)')) score('denunciar', 9);
+    if (p.has(r'(qual|que|tipo de|melhor) mascara|mascara (de pano|cirurgica|comum|caseira|funciona|serve|protege|certa)|purificador')) score('mascara', 8);
 
     if (scores.isEmpty) return _fallback();
     final ranked = scores.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
@@ -219,6 +255,10 @@ class RuleResponder {
       {'pet', 'atividade', 'melhor_horario'},
       {'sol', 'melhor_horario', 'mais_quente'},
       {'fumaca', 'casa', 'agora_vs_depois', 'atividade'},
+      {'fumaca', 'mascara', 'causa_fumaca', 'denunciar', 'vulneravel', 'chuva'},
+      {'alagamento', 'chuva', 'previsao', 'agora_vs_depois'},
+      {'por_que_calor', 'umidade', 'agora', 'sombra'},
+      {'max_hoje', 'mais_quente', 'agora', 'previsao', 'agora_vs_depois'},
     ];
     return groups.any((g) => g.contains(a) && g.contains(b));
   }
@@ -247,7 +287,16 @@ class RuleResponder {
         'agora' => _agora(),
         'fumaca' => _fumaca(p),
         'sombra' => _sombra(),
-        'planos' => 'Os planos e o que cada um inclui estão em Perfil > Planos. No ThermoGuia+ o assistente não tem limite de perguntas por dia.',
+        'planos' => 'O ThermoGuia é gratuito. Se quiser apoiar, toque em Perfil > Apoie o ThermoGuia: as doações ajudam a '
+            'plantar árvores e a entregar máscaras de proteção em Manaus.',
+        'por_que_calor' => _porQueCalor(p),
+        'umidade' => _umidade(),
+        'max_hoje' => _maxHoje(),
+        'previsao' => _previsao(p),
+        'alagamento' => _alagamento(p),
+        'causa_fumaca' => _causaFumaca(),
+        'denunciar' => _denunciar(),
+        'mascara' => _mascara(p),
         _ => _dica(),
       };
 
@@ -544,14 +593,17 @@ class RuleResponder {
 
   String _agora() {
     final top = c.risk.recommendations.isEmpty ? '' : ' ${c.risk.recommendations.first.message}';
+    final a = c.airNow;
+    final air = a == null
+        ? ''
+        : ' Qualidade do ar ${a.level.label.toLowerCase()}${a.level.isBad ? ' por causa da fumaça: use máscara de proteção na rua' : ''}.';
     return 'Agora em ${c.city.name}: ${now.temperatureC.round()}°C, umidade ${now.humidity.round()}%'
-        '${night ? '' : ', UV ${now.uvIndex.round()}'}. Para você a sensação é de ~$feels°C, risco $lvl.$top';
+        '${night ? '' : ', UV ${now.uvIndex.round()}'}. Para você a sensação é de ~$feels°C, risco $lvl.$air$top';
   }
 
   String _saudacao() {
     final name = c.userName.isEmpty ? '' : ', ${c.userName.split(' ').first}';
-    return 'Oi$name! Agora a sensação é de ~$feels°C (risco $lvl). '
-        'Posso ver o melhor horário para você sair, quanta água beber ou se dá para fazer uma atividade em um horário específico.';
+    return 'Oi$name! ${_today().join(' ')}';
   }
 
   String _dica() {
@@ -578,15 +630,30 @@ class RuleResponder {
         }
       }
     }
+    final askingWhen = p.has(r'que horas?|quando|horario|ate que|a partir de|sem fumaca|ar limpo|ar bom');
     final parts = <String>[
+      if (askingWhen)
+        a.level.isBad
+            ? (clears != null
+                ? 'O ar deve ficar sem fumaça forte ${_when(clears)}.'
+                : 'Não há previsão de o ar ficar sem fumaça nas próximas horas.')
+            : 'Agora o ar já está sem fumaça forte.',
       'A qualidade do ar está ${a.level.label.toLowerCase()} agora (índice ${a.index}). '
           '${cig >= 0.5 ? 'Respirar esse ar o dia todo equivale a ${cig.toStringAsFixed(1).replaceAll('.', ',')} cigarros. ' : ''}'
           '${advice.message}',
-      if (a.level.isBad && clears != null) 'A previsão é de melhora ${_when(clears)}.',
-      if (a.level.isBad && clears == null) 'Não há previsão de melhora nas próximas horas.',
+      if (!askingWhen && a.level.isBad && clears != null) 'A previsão é de melhora ${_when(clears)}.',
+      if (!askingWhen && a.level.isBad && clears == null) 'Não há previsão de melhora nas próximas horas.',
       if (safe.isNotEmpty) 'Hora Segura para sair: ${safe.map((w) => w.rangeLabel).join(' e ')}.',
       if (p.has(r'casa|janela|dormir|quarto'))
         'Em casa: janelas fechadas enquanto o ar estiver ruim, pano úmido nas frestas e ventilador ligado. Abra tudo quando o app avisar que o ar melhorou.',
+      if (p.has(r'asma|bronquite|rinite|alergi|doenca respiratoria|pulmao|\bdpoc\b'))
+        'Quem tem asma ou bronquite sente primeiro: deixe a bombinha por perto, evite sair nos horários de ar ruim e procure atendimento se a falta de ar não passar.',
+      if (p.has(r'crianca|bebe|filho|filha|idos|avo\b|vovo|gestante|gravida'))
+        'Crianças, idosos e gestantes respiram mais rápido e sofrem mais com a fumaça: em dia de ar ruim, brincadeiras e passeios dentro de casa.',
+      if (a.level.isBad && (p.activity != null || p.has(r'exercici|treino|esporte|academia')))
+        'Com o ar assim, evite exercício ao ar livre: no esforço você respira muito mais fumaça. Prefira lugares fechados.',
+      if (p.has(r'chuv'))
+        'A chuva ajuda a baixar a fumaça e o ar costuma melhorar depois de um bom temporal. Agora a chance de chuva é de ${now.precipitationProb.round()}%.',
     ];
     return parts.join(' ');
   }
@@ -599,7 +666,125 @@ class RuleResponder {
         '${smoke ? 'Atenção: hoje a fumaça cobre a cidade inteira e a sombra não filtra o ar. Use máscara de proteção mesmo nas ruas arborizadas.' : 'Nas horas de sol forte, ande pelo lado da rua com sombra.'}';
   }
 
-  String _fallback() => 'Não tenho certeza se entendi. Eu ajudo com o calor do seu dia: '
-      'se dá para sair em um horário, quanta água beber, que roupa usar, chuva, sol forte, '
-      'lugares para se refrescar e rotas com sombra. Tente, por exemplo: "Posso caminhar 3 km às 16h?"';
+  /// Sem assunto reconhecido: em vez de dizer que não entendeu, conta o que
+  /// importa agora sobre o calor e a fumaça e oferece os próximos passos.
+  String _fallback() =>
+      ['Eu acompanho o calor e a fumaça em ${c.city.name}, então aqui vai o que importa agora:', ..._today()].join(' ');
+
+  /// Resumo de agora: calor, fumaça, chuva ou temporal e sol, e o que perguntar.
+  List<String> _today() {
+    final a = c.airNow;
+    final safe = c.safeWindows;
+    final rain = forecastAlerts(c.hourly, now: now.time, hours: 12).where((x) => x.kind.isRain).firstOrNull;
+    final sun = !night && now.uvIndex >= 6;
+    return [
+      'Calor: ${now.temperatureC.round()}°C com sensação de ~$feels°C para você (risco $lvl).',
+      if (a != null)
+        'Fumaça: a qualidade do ar está ${a.level.label.toLowerCase()}'
+            '${a.level.isBad ? '; use máscara de proteção na rua' : ''}'
+            '${safe.isNotEmpty ? '. Hora Segura para sair: ${safe.first.rangeLabel}' : ''}.',
+      rain != null ? 'Chuva: ${rain.message}' : 'Chuva: sem previsão de chuva forte nas próximas horas.',
+      if (sun) 'Sol: UV ${now.uvIndex.round()} agora; use protetor, boné e prefira a sombra.',
+      'Pode me perguntar o melhor horário para sair, se precisa de máscara ou se vai chover.',
+    ];
+  }
+
+  // ---------- calor em Manaus, previsão e fumaça ----------
+
+  String _porQueCalor(ParsedQuestion p) {
+    final city = 'Manaus fica perto da linha do Equador: o sol chega quase a pino o ano todo, e a umidade da floresta e dos rios '
+        'deixa o ar abafado, o que dificulta o suor evaporar e aumenta a sensação de calor.';
+    final island = 'Na cidade, asfalto, concreto e telhados guardam o calor do dia (a ilha de calor urbana): áreas com muito '
+        'asfalto e pouca árvore esquentam vários graus a mais que bairros arborizados e parques, e demoram mais para esfriar à noite.';
+    final nowTxt = 'Agora: ${now.temperatureC.round()}°C e umidade de ${now.humidity.round()}%, sensação de ~$feels°C.';
+    final tip = 'Por isso as Rotas Frescas buscam ruas com sombra de árvores.';
+    return p.has(r'ilha|bairro|esquentam') ? '$island $city $nowTxt $tip' : '$city $island $nowTxt';
+  }
+
+  String _umidade() {
+    final h = now.humidity.round();
+    final gap = feels - now.temperatureC.round();
+    return h >= 60
+        ? 'Sim. Com umidade de $h% agora, o suor evapora pouco e o corpo se resfria menos: por isso a sensação '
+            '(~$feels°C) fica ${gap > 0 ? '$gap graus ' : ''}acima dos ${now.temperatureC.round()}°C do termômetro. '
+            'Roupas leves e largas, sombra e água ajudam o corpo a perder calor.'
+        : 'A umidade está em $h% agora, mais baixa que o normal em Manaus. O suor evapora rápido e você perde água sem perceber: '
+            'beba mesmo sem sede${c.airNow != null && c.airNow!.level.isBad ? ', e com o ar seco a fumaça irrita mais olhos e garganta' : ''}.';
+  }
+
+  String _maxHoje() {
+    final today = c.hourly.where((h) => h.time.day == now.time.day).toList();
+    if (today.isEmpty) return 'Ainda não tenho a previsão de hoje.';
+    final max = today.reduce((a, b) => a.temperatureC >= b.temperatureC ? a : b);
+    final min = today.reduce((a, b) => a.temperatureC <= b.temperatureC ? a : b);
+    final passed = max.time.hour < now.time.hour;
+    return 'Hoje a máxima ${passed ? 'já foi' : 'prevista é'} de ~${max.temperatureC.round()}°C por volta das ${max.time.hour}h '
+        '(sensação de ~${feelsAt(max).round()}°C), e a mais baixa das próximas horas fica em ~${min.temperatureC.round()}°C às ${min.time.hour}h.'
+        '${c.avoid != null ? ' Evite o sol ${_range(c.avoid!)}.' : ''}';
+  }
+
+  String _previsao(ParsedQuestion p) {
+    final tomorrow = p.has(r'amanha');
+    final day = c.hourly.where((h) => tomorrow ? h.time.day != now.time.day : h.time.day == now.time.day && !h.time.isBefore(now.time)).toList();
+    if (day.isEmpty) return 'Ainda não tenho a previsão ${tomorrow ? 'de amanhã' : 'das próximas horas'}. Tente de novo mais tarde.';
+    final hottest = day.reduce((a, b) => feelsAt(a) >= feelsAt(b) ? a : b);
+    final wettest = day.reduce((a, b) => a.precipitationProb >= b.precipitationProb ? a : b);
+    // Só os avisos de chuva: a sensação de calor já vem na primeira frase.
+    final alerts = forecastAlerts(day, now: day.first.time, hours: 24).where((a) => a.kind.isRain).toList();
+    final smoke = c.airHourly.where((h) => day.any((d) => d.time.hour == h.time.hour && d.time.day == h.time.day)).any((h) => h.level.isBad);
+    return [
+      '${tomorrow ? 'Amanhã' : 'No resto do dia'}: máxima de ~${hottest.temperatureC.round()}°C por volta das ${hottest.time.hour}h '
+          '(sensação de até ~${feelsAt(hottest).round()}°C) e chance de chuva de até ${wettest.precipitationProb.round()}%'
+          '${wettest.precipitationProb >= 30 ? ' às ${wettest.time.hour}h' : ''}.',
+      if (alerts.isNotEmpty) '${alerts.first.title}: ${alerts.first.message}',
+      if (smoke) 'A fumaça deve continuar: tenha a máscara de proteção por perto.',
+      if (p.has(r'proximos dias|semana')) 'Por enquanto tenho a previsão hora a hora só até amanhã.',
+    ].join(' ');
+  }
+
+  String _alagamento(ParsedQuestion p) {
+    final rain = forecastAlerts(c.hourly, now: now.time, hours: 24).where((a) => a.kind.isRain).firstOrNull;
+    final next = c.hourly.where((h) => h.time.isAfter(now.time)).take(24).toList();
+    final maxProb = next.isEmpty ? now.precipitationProb : next.map((h) => h.precipitationProb).reduce(math.max);
+    final tips = 'Em dia de temporal: não atravesse ruas alagadas (a correnteza arrasta e a água pode esconder buracos), '
+        'fique longe da beira dos igarapés e de encostas, e tire os aparelhos da tomada se a água entrar em casa. '
+        'Defesa Civil: 199; Bombeiros: 193.';
+    if (rain == null) {
+      return 'Sem previsão de chuva forte nas próximas 24 horas (no máximo ${maxProb.round()}% de chance de chuva), '
+          'então o risco de alagamento é baixo. ${p.has(r'o que (eu )?(faco|fazer)|como (me )?proteger') ? tips : ''}'.trim();
+    }
+    return switch (rain.kind) {
+      WeatherAlertKind.alagamento => rain.message,
+      WeatherAlertKind.chuva => '${rain.message} Não há previsão de chuva forte, então o risco de alagamento é baixo.',
+      _ => '${rain.message} Com chuva forte, ruas baixas podem alagar. $tips',
+    };
+  }
+
+  String _causaFumaca() {
+    final a = c.airNow;
+    return 'A fumaça vem das queimadas na Amazônia, principalmente no sul do Amazonas e em estados vizinhos, além de focos '
+        'perto de Manaus. Na seca, mais forte entre agosto e novembro, a vegetação fica seca, o fogo se espalha fácil e o vento '
+        'traz a fumaça para a cidade. Em anos de seca severa, como 2023 e 2024, ela cobriu Manaus por semanas. '
+        'O ar costuma melhorar com a volta das chuvas. '
+        '${a == null ? '' : 'Agora a qualidade do ar está ${a.level.label.toLowerCase()} (índice ${a.index}).'}'.trim();
+  }
+
+  String _denunciar() => 'Se o fogo estiver perto de casas, pessoas ou mata, ligue 193 (Bombeiros). Para denunciar queimada '
+      'ilegal, ligue para a Linha Verde do Ibama: 0800 061 8080 (ligação grátis). Diga o local exato e, se puder, mande foto. '
+      'Não tente apagar um fogo grande sozinho e fique longe da fumaça.';
+
+  String _mascara(ParsedQuestion p) {
+    final a = c.airNow;
+    return [
+      'A que protege da fumaça é a máscara de proteção que veda bem no rosto, com elástico atrás da cabeça e clipe no nariz '
+          '(vendida em farmácias e lojas de material de construção). Máscara de pano ou cirúrgica quase não segura a fumaça fina.',
+      'Ajuste bem, sem folga nas laterais, e troque quando ficar suja, úmida ou difícil de respirar.',
+      if (p.has(r'purificador|dentro de casa|em casa'))
+        'Dentro de casa, um purificador de ar com filtro HEPA ajuda, com portas e janelas fechadas.',
+      if (a != null)
+        a.level.isBad
+            ? 'Hoje precisa: a qualidade do ar está ${a.level.label.toLowerCase()}.'
+            : 'Agora o ar está ${a.level.label.toLowerCase()}, então não precisa na rua.',
+    ].join(' ');
+  }
 }

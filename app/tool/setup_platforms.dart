@@ -5,12 +5,12 @@
 //
 // O que faz:
 //  1. flutter create (gera android/ e ios/ se ainda não existirem)
-//  2. copia o AndroidManifest (permissões e os três ícones), a MainActivity
-//     que troca o ícone e os ícones alternativos (platform/android)
+//  2. copia o AndroidManifest (permissões), a MainActivity e os ícones de
+//     notificação (platform/android)
 //  3. habilita o "desugaring" exigido pelas notificações locais e desliga o
 //     R8 no release (ele apaga código que os plugins chamam por JNI: tela preta)
 //  4. adiciona as descrições de permissão no Info.plist do iOS
-//  5. gera os ícones (com as variantes Escuro e Tingido) e a tela de abertura
+//  5. gera os ícones (no iOS, com as variantes Escuro e Tingido) e a tela de abertura
 //
 // Mudou o desenho do ícone? Antes, rode: flutter test tool/render_brand_assets.dart
 import 'dart:io';
@@ -27,7 +27,7 @@ Future<void> main() async {
   File('platform/android/MainActivity.kt')
       .copySync('android/app/src/main/kotlin/br/com/thermoguia/thermoguia/MainActivity.kt');
   _copyDir(Directory('platform/android/res'), Directory('android/app/src/main/res'));
-  stdout.writeln('✓ Ícones alternativos do Android (Escuro e Tingido)');
+  stdout.writeln('✓ Ícones de notificação do Android');
 
   _patchGradle();
   _patchInfoPlist();

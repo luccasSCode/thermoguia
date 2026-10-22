@@ -139,15 +139,6 @@ class _Body extends ConsumerWidget {
             ),
           ),
         ),
-        if (!s.isPlus)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: TextButton.icon(
-              icon: const Icon(Icons.workspace_premium_outlined, color: Tokens.sol),
-              label: const Text('Com o ThermoGuia+: gotas em dobro e cupons de até 25%'),
-              onPressed: () => context.push('/planos'),
-            ),
-          ),
         if (demo)
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),

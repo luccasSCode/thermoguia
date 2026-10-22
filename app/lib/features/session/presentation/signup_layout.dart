@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 /// Ilustração de Manaus no topo e o conteúdo embaixo, tudo numa tela só: a
@@ -23,7 +25,9 @@ class SignupLayout extends StatelessWidget {
                     constraints: BoxConstraints(
                       minHeight: minHeaderHeight,
                       // Nunca maior que a ilustração inteira na largura da tela.
-                      maxHeight: MediaQuery.sizeOf(context).width * 780 / 1170,
+                      // No 1º quadro do Android a largura ainda é 0: o max não
+                      // pode ficar abaixo do min.
+                      maxHeight: math.max(minHeaderHeight, MediaQuery.sizeOf(context).width * 780 / 1170),
                     ),
                     child: const DecoratedBox(
                       decoration: BoxDecoration(

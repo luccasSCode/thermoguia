@@ -150,6 +150,11 @@ ou nas marcações e níveis com confiança alta; o volume é arredondado para b
 erro ou recusa da IA manda o caso para a revisão humana, nunca aprova sozinho. Sem chave de IA, tudo
 vai para a revisão.
 
+**Conteúdo proibido.** A IA examina a foto inteira e a legenda e indica a violação (`violacao`):
+`sexual`, `racismo`, `homofobia_transfobia`, `nazismo_extremismo`, `politica_partidaria`, `odio`,
+`violencia`, `drogas`, `dados_pessoais` ou `outro`. Qualquer violação recusa o post, mesmo que a foto
+comprove a categoria, e a pessoa vê o motivo.
+
 **Selos.** Por categoria, vence quem somar mais pontos de interação em posts aprovados na semana
 (segunda a domingo, hora local): cada pessoa diferente que reagiu vale 1, que comentou vale 2; o autor
 e contas com menos de 2 dias não contam; mínimo de 3 pontos. "+ Rotas Frescas" vai para quem mais
@@ -159,8 +164,12 @@ concluiu Rotas Frescas. A semana fecha na primeira consulta depois de domingo e 
 
 Rotas ativas só com `ADMIN_TOKEN` configurado; sem ele, respondem 404.
 
+**Página de revisão:** abra `https://SUA-API/admin/revisao` no navegador, cole a `ADMIN_TOKEN` e
+aprove ou recuse cada foto (com o motivo). A chave fica só na aba aberta.
+
 | Método | Rota | Descrição |
 |---|---|---|
+| GET | `/admin/revisao` | Página da fila de revisão (pede a chave) |
 | GET | `/admin/queue` | Posts em revisão e conteúdo tirado do ar por denúncias, com a resposta da IA |
 | GET | `/admin/posts/{id}/image/{kind}` | Fotos do post |
 | POST | `/admin/posts/{id}/decide` | `{approve, ml?, reason?}`; na água, aprovar exige os ml |

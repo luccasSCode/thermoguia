@@ -55,7 +55,7 @@ class OpenMeteoService {
       'longitude': lng.toStringAsFixed(4),
       'current': 'temperature_2m,relative_humidity_2m,apparent_temperature,'
           'is_day,cloud_cover,wind_speed_10m',
-      'hourly': 'temperature_2m,relative_humidity_2m,uv_index,precipitation_probability',
+      'hourly': 'temperature_2m,relative_humidity_2m,uv_index,precipitation_probability,precipitation,weather_code',
       'timezone': 'GMT',
       'forecast_days': '2',
     });
@@ -93,6 +93,8 @@ class OpenMeteoService {
           humidity: n((h['relative_humidity_2m'] as List)[i]),
           uvIndex: n((h['uv_index'] as List)[i]),
           precipitationProb: n((h['precipitation_probability'] as List)[i]),
+          precipitationMm: n((h['precipitation'] as List?)?[i]),
+          weatherCode: ((h['weather_code'] as List?)?[i] as num?)?.toInt(),
         ),
     ];
 

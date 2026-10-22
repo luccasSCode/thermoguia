@@ -11,6 +11,12 @@ import '../session/presentation/session_controller.dart';
 /// Quando uma sugestão faz mais sentido.
 enum When { sempre, dia, noite, chuva, calorForte, fumaca }
 
+/// Assunto da pergunta: a lista infinita alterna entre os dois.
+enum Topic { calor, fumaca }
+
+final _smokeWords = RegExp(r'fumaça|queimada|máscara|qualidade do ar|janelas|Hora Segura|olhos e garganta|o ar\b',
+    caseSensitive: false);
+
 class Suggestion {
   const Suggestion(this.text, this.icon, {this.personas = const {}, this.when = When.sempre});
   final String text;
@@ -19,6 +25,8 @@ class Suggestion {
   /// Perfis para quem a pergunta é mais útil (vazio = todos).
   final Set<Persona> personas;
   final When when;
+
+  Topic get topic => when == When.fumaca || _smokeWords.hasMatch(text) ? Topic.fumaca : Topic.calor;
 }
 
 /// Banco de perguntas prontas. Todas têm resposta concreta no assistente,
@@ -66,6 +74,31 @@ const suggestionBank = <Suggestion>[
   Suggestion('Trabalho na rua o dia todo. Como me proteger da fumaça?', Icons.masks_outlined,
       personas: {Persona.entregador, Persona.vendedor, Persona.carteiro}, when: When.fumaca),
   Suggestion('Qual a Hora Segura para sair hoje?', Icons.verified_user_outlined),
+  // Calor em Manaus e previsão do tempo.
+  Suggestion('Por que Manaus é tão quente e abafada?', Icons.thermostat),
+  Suggestion('O que é a ilha de calor na cidade?', Icons.location_city_outlined),
+  Suggestion('Quais bairros esquentam mais em Manaus?', Icons.map_outlined),
+  Suggestion('A umidade alta piora a sensação de calor?', Icons.water_outlined),
+  Suggestion('Qual vai ser a temperatura máxima hoje?', Icons.device_thermostat, when: When.dia),
+  Suggestion('Até que horas vai fazer calor hoje?', Icons.schedule, when: When.dia),
+  Suggestion('Qual a sensação térmica agora?', Icons.thermostat_auto_outlined),
+  Suggestion('Qual o índice UV agora?', Icons.wb_sunny_outlined, when: When.dia),
+  Suggestion('Como saber se estou desidratado?', Icons.water_drop_outlined),
+  Suggestion('Ventilador ajuda mesmo no calor forte?', Icons.wind_power_outlined),
+  Suggestion('Como vai estar o tempo amanhã?', Icons.calendar_today_outlined),
+  Suggestion('Vai chover forte hoje? Tem risco de alagamento?', Icons.flood_outlined),
+  // Fumaça das queimadas.
+  Suggestion('Por que tem tanta fumaça em Manaus?', Icons.local_fire_department_outlined),
+  Suggestion('De onde vem a fumaça das queimadas?', Icons.public),
+  Suggestion('Quando acaba a temporada de queimadas?', Icons.event_outlined),
+  Suggestion('Qual máscara protege da fumaça?', Icons.masks_outlined),
+  Suggestion('Máscara de pano protege da fumaça?', Icons.masks_outlined),
+  Suggestion('Como denunciar uma queimada?', Icons.report_outlined),
+  Suggestion('Quem tem asma pode sair com essa fumaça?', Icons.medical_services_outlined),
+  Suggestion('A fumaça faz mal para crianças?', Icons.child_care),
+  Suggestion('Posso fazer exercício ao ar livre com fumaça?', Icons.directions_run),
+  Suggestion('A chuva ajuda a limpar a fumaça?', Icons.grain),
+  Suggestion('Como limpar o ar dentro de casa?', Icons.home_outlined),
 ];
 
 /// Situação atual, para ordenar as sugestões.
@@ -125,4 +158,27 @@ List<Suggestion> pickSuggestions(SuggestionContext ctx, {required int count, int
   // Na primeira tela, o que é do perfil vem antes; nas trocas, mistura mais.
   pool.sort((a, b) => seed == 0 ? rank(b).compareTo(rank(a)) : (rank(b).clamp(-1, 1)).compareTo(rank(a).clamp(-1, 1)));
   return pool.take(count).toList();
+}
+
+/// Mais perguntas para a rolagem da tela inicial: alterna calor e fumaça e não
+/// repete as de [skip]. Mostra também as de chuva, fumaça e calor forte fora
+/// do momento (a resposta usa os dados de agora); só respeita dia/noite e perfil.
+List<Suggestion> moreSuggestions(SuggestionContext ctx, {required int page, int count = 6, Set<String> skip = const {}}) {
+  final rnd = math.Random(page * 7919 + 1);
+  bool ok(Suggestion s) =>
+      !skip.contains(s.text) &&
+      (s.personas.isEmpty || s.personas.contains(ctx.persona)) &&
+      switch (s.when) {
+        When.dia => !ctx.night,
+        When.noite => ctx.night,
+        _ => true,
+      };
+  final heat = suggestionBank.where((s) => ok(s) && s.topic == Topic.calor).toList()..shuffle(rnd);
+  final smoke = suggestionBank.where((s) => ok(s) && s.topic == Topic.fumaca).toList()..shuffle(rnd);
+  final out = <Suggestion>[];
+  while (out.length < count && (heat.isNotEmpty || smoke.isNotEmpty)) {
+    final takeSmoke = out.length.isOdd ? smoke.isNotEmpty : heat.isEmpty;
+    out.add((takeSmoke ? smoke : heat).removeAt(0));
+  }
+  return out;
 }

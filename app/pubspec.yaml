@@ -26,7 +26,7 @@ dependencies:
   url_launcher: ^6.3.1
   google_fonts: ^6.2.1
   flutter_tts: ^4.2.5
-  wakelock_plus: ^1.8.0
+  wakelock_plus: ^1.7.0
   flutter_timezone: ^5.1.1
   timezone: ^0.10.1
   image_picker: ^1.2.4
@@ -49,7 +49,7 @@ flutter:
 # Ícones do app (lojas e tela inicial do aparelho). Os PNGs saem do desenho
 # vetorial: flutter test tool/render_brand_assets.dart && dart run flutter_launcher_icons
 # iOS 18: variantes Escuro e Tingido automáticas. Android 13+: ícone temático
-# (monocromático); Escuro e Tingido também podem ser escolhidos no Perfil.
+# (monocromático).
 flutter_launcher_icons:
   android: "ic_launcher"
   ios: true

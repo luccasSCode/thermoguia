@@ -64,6 +64,16 @@ void main() {
       expect(VerificationService.decidePost(const {}).approved, isFalse);
       expect(VerificationService.decidePost({'conteudo_seguro': true}).approved, isFalse);
     });
+    test('conteúdo proibido é recusado mesmo comprovando a categoria', () {
+      for (final v in VerificationService.violations.keys) {
+        final d = VerificationService.decidePost({..._post(), 'violacao': v});
+        expect(d.status, 'recusado', reason: v);
+        expect(d.reason, VerificationService.violations[v], reason: v);
+      }
+      expect(VerificationService.decidePost({..._post(), 'violacao': 'politica_partidaria'}).reason, contains('política'));
+      expect(VerificationService.decideWater({..._water(), 'violacao': 'nazismo_extremismo'}).status, 'recusado');
+      expect(VerificationService.decidePost({..._post(), 'violacao': 'nenhuma'}).status, 'aprovado');
+    });
   });
 
   group('prova de água', () {

@@ -26,43 +26,11 @@
             <meta-data
                 android:name="io.flutter.embedding.android.NormalTheme"
                 android:resource="@style/NormalTheme"/>
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
         </activity>
-
-        <!-- Ícones do app (Perfil → Ícone do app). Só um alias fica ativo por vez;
-             MainActivity.kt troca qual deles aparece na tela inicial. -->
-        <activity-alias
-            android:name=".LauncherPadrao"
-            android:targetActivity=".MainActivity"
-            android:icon="@mipmap/ic_launcher"
-            android:enabled="true"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.LAUNCHER"/>
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".LauncherEscuro"
-            android:targetActivity=".MainActivity"
-            android:icon="@mipmap/ic_launcher_escuro"
-            android:enabled="false"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.LAUNCHER"/>
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".LauncherTingido"
-            android:targetActivity=".MainActivity"
-            android:icon="@mipmap/ic_launcher_tingido"
-            android:enabled="false"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.LAUNCHER"/>
-            </intent-filter>
-        </activity-alias>
         <meta-data android:name="flutterEmbedding" android:value="2"/>
 
         <!-- Login com Google e Facebook: o navegador volta para thermoguia://auth. -->

@@ -14,3 +14,4 @@ export 'src/sun_position.dart';
 export 'src/geo.dart';
 export 'src/navigation.dart';
 export 'src/air_quality.dart';
+export 'src/weather_alerts.dart';

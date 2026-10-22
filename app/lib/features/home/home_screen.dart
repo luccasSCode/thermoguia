@@ -13,6 +13,7 @@ import '../adaptive/adaptive_controller.dart';
 import '../air/air_card.dart';
 import '../air/air_providers.dart';
 import '../climate/climate_providers.dart';
+import '../climate/weather_alert_popup.dart';
 import '../hydration/hydration_controller.dart';
 import '../safety/emergency_sheet.dart';
 import '../session/presentation/session_controller.dart';
@@ -42,7 +43,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final climate = ref.watch(climateProvider);
-    return Scaffold(
+    return WeatherAlertWatcher(
+        child: Scaffold(
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
@@ -92,7 +94,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         ),
       ),
-    );
+    ));
   }
 }
 
@@ -217,7 +219,8 @@ class _Hero extends ConsumerWidget {
             children: [
               Text(
                 '${risk.effectiveIndexC.round()}°',
-                style: t.displaySmall?.copyWith(height: 1, color: color, fontWeight: FontWeight.w700, letterSpacing: -1),
+                style:
+                    t.displaySmall?.copyWith(height: 1, color: color, fontWeight: FontWeight.w700, letterSpacing: -1),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -352,13 +355,12 @@ class _BriefingBlock extends ConsumerWidget {
   }
 }
 
-/// Botões dedicados para o Clube H2O e os Planos: só abrem com um toque.
+/// Botões dedicados para o Clube H2O e as doações: só abrem com um toque.
 class _Shortcuts extends ConsumerWidget {
   const _Shortcuts();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isPlus = ref.watch(sessionProvider.select((s) => s.user?.isPlus ?? false));
     Widget label(String text) => FittedBox(fit: BoxFit.scaleDown, child: Text(text, maxLines: 1, softWrap: false));
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
@@ -376,9 +378,9 @@ class _Shortcuts extends ConsumerWidget {
         Expanded(
           child: _GradientOutline(
             child: FilledButton.tonalIcon(
-              icon: const Icon(Icons.workspace_premium_outlined),
-              label: label(isPlus ? 'ThermoGuia+' : 'Planos'),
-              onPressed: () => context.push('/planos'),
+              icon: const Icon(Icons.volunteer_activism_outlined),
+              label: label('Apoiar'),
+              onPressed: () => context.push('/apoiar'),
             ),
           ),
         ),
@@ -573,7 +575,8 @@ class _WindowsBlock extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
           child: Text(
             [
-              if (smoky && safe.isEmpty) 'Com a fumaça, não há horário de ar limpo nas próximas 24h: se sair, use máscara de proteção.',
+              if (smoky && safe.isEmpty)
+                'Com a fumaça, não há horário de ar limpo nas próximas 24h: se sair, use máscara de proteção.',
               if (smoky && safe.isNotEmpty) 'Nesses horários o ar fica limpo e o calor é suportável (Hora Segura).',
               if (w.avoid != null) 'Evite sair entre ${w.avoid!.rangeLabel}, o período mais quente.',
               if (habitual.isNotEmpty)
@@ -622,7 +625,9 @@ class _RecommendationsBlock extends ConsumerWidget {
           color: color,
           title: r.title,
           message: r.message,
-          onTap: r.kind == RecommendationKind.sombra || r.kind == RecommendationKind.rota ? () => context.go('/rotas') : null,
+          onTap: r.kind == RecommendationKind.sombra || r.kind == RecommendationKind.rota
+              ? () => context.go('/rotas')
+              : null,
         );
       }),
     ];
@@ -678,7 +683,10 @@ class _RecCard extends StatelessWidget {
                 if (onTap != null) Icon(Icons.arrow_forward, size: 18, color: color),
               ]),
               const SizedBox(height: 10),
-              Text(title, style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700), maxLines: 2, overflow: TextOverflow.ellipsis),
+              Text(title,
+                  style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis),
               const SizedBox(height: 4),
               Expanded(
                 child: Text(message, style: t.bodySmall, maxLines: 4, overflow: TextOverflow.ellipsis),

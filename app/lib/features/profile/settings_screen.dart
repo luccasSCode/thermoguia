@@ -7,10 +7,8 @@ import '../../core/services/notification_inbox.dart';
 import '../../core/widgets/common.dart';
 import '../air/air_providers.dart';
 import '../notifications/engagement.dart';
-import 'app_icon_setting.dart';
 
-/// Configurações: o que o app pode avisar, o histórico de decisões e, no
-/// Android, o ícone do app.
+/// Configurações: o que o app pode avisar e o histórico de decisões.
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
@@ -90,10 +88,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/historico'),
           ),
-          if (canChooseAppIcon) ...[
-            const SectionTitle('Ícone do app'),
-            const AppIconPicker(),
-          ],
         ],
       ),
     );

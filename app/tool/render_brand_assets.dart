@@ -45,20 +45,8 @@ void main() {
       await _png('$b/app_icon_foreground.png', 1024, LeafIconPainter(background: false));
       await _png('$b/app_icon_monochrome.png', 1024, LeafIconPainter(silhouette: true));
 
-      // Ícones alternativos do Android (Escuro e Tingido), escolhidos no Perfil.
-      const res = 'platform/android/res';
-      for (final v in [LeafVariant.escuro, LeafVariant.tingido]) {
-        final n = v.name;
-        await _png('$res/drawable-nodpi/ic_launcher_${n}_background.png', 432,
-            LeafIconPainter(variant: v, contentScale: _adaptive, frame: const LeafFrame(sunOpacity: 0, leafOpacity: 0, stemOpacity: 0, destScale: 0)));
-        await _png('$res/drawable-nodpi/ic_launcher_${n}_foreground.png', 432,
-            LeafIconPainter(variant: v, background: false, contentScale: _adaptive));
-        await _png('$res/mipmap-xxxhdpi/ic_launcher_$n.png', 192, LeafIconPainter(variant: v));
-      }
-      await _png('$res/drawable-nodpi/ic_launcher_alt_monochrome.png', 432,
-          LeafIconPainter(silhouette: true, contentScale: _adaptive));
-
       // Notificações do Android: folha branca na barra de status e o ícone do app ao lado do texto.
+      const res = 'platform/android/res';
       await _png('$res/drawable-nodpi/ic_notification.png', 96, LeafIconPainter(silhouette: true));
       await _png('$res/drawable-nodpi/ic_notification_large.png', 256, LeafIconPainter());
 

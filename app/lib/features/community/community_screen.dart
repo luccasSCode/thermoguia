@@ -552,9 +552,13 @@ Future<String?> _askCaption(BuildContext context, Uint8List photo, String title,
 
 Future<bool> _publishPhoto(BuildContext context, WidgetRef ref, CommunityCategory c) async {
   // O print do app vem da galeria; as outras fotos, da câmera ou da galeria.
-  final photo = c.id == 'app_aberto'
-      ? await _galleryOnly(context, ref)
-      : await _capture(context, ref, c.label);
+  final Future<Uint8List?> picking;
+  if (c.id == 'app_aberto') {
+    picking = _galleryOnly(context, ref);
+  } else {
+    picking = _capture(context, ref, c.label);
+  }
+  final photo = await picking;
   if (photo == null || !context.mounted) return false;
   final caption = await _askCaption(context, photo, c.label, initial: _autoCaption(c));
   if (caption == null || !context.mounted) return false;

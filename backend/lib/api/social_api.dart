@@ -7,6 +7,7 @@ import '../app_deps.dart';
 import '../cities.dart';
 import '../http/http_utils.dart';
 import '../services/verification_service.dart';
+import 'admin_page.dart';
 
 /// Corpo JSON com a foto em base64 (limite de 2,5 MB no corpo inteiro).
 Future<(Map<String, dynamic>, List<int>?)> _readPhotoBody(Request req) async {
@@ -215,6 +216,14 @@ void registerAdminRoutes(Router r, AppDeps d) {
     final token = d.config.adminToken;
     if (token.isEmpty || req.headers['x-admin-token'] != token) throw ApiError(404, 'Rota não encontrada.');
   }
+
+  /// Página da fila (sem dados: pede a chave e usa as rotas abaixo).
+  r.get('/admin/revisao', (Request _) => Response.ok(adminReviewPage, headers: {
+        'content-type': 'text/html; charset=utf-8',
+        'cache-control': 'no-store',
+        'referrer-policy': 'no-referrer',
+        'x-robots-tag': 'noindex',
+      }));
 
   r.get('/admin/queue', (Request req) async {
     guard(req);
