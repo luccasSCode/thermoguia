@@ -7,6 +7,7 @@ enum NotifKind {
   agua('Lembretes de água', 'Durante "Estou na rua agora", no ritmo do calor'),
   calor('Alertas de calor', 'Quando o calor fica extremo onde você está'),
   ar('Fumaça e qualidade do ar', 'Quando usar máscara, fechar as janelas e quando o ar fica bom'),
+  tempo('Chuva, temporal e sol', 'Com antecedência: risco de alagamento, temporal, chuva forte, calor extremo e sol forte'),
   dia('Resumo do dia e Clube H2O', 'Resumo da manhã, pico de calor, fim de tarde e sua sequência');
 
   const NotifKind(this.title, this.subtitle);

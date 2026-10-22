@@ -92,12 +92,13 @@ class NotificationService {
   Future<void> airAlert(String title, String body) => _show(3, NotifKind.ar, title, body, route: '/agora');
 
   NotificationDetails _details(NotifKind k, String body) {
-    final urgent = k == NotifKind.ar || k == NotifKind.calor;
+    final urgent = k == NotifKind.ar || k == NotifKind.calor || k == NotifKind.tempo;
     final (channel, name, description) = switch (k) {
       NotifKind.agua => ('hidratacao', 'Lembretes de água', 'Lembretes para beber água enquanto você está na rua'),
       NotifKind.calor => ('alertas', 'Alertas de calor', 'Avisos quando o calor fica perigoso'),
       NotifKind.ar => ('qualidade_ar', 'Fumaça e qualidade do ar', 'Quando usar máscara de proteção e quando o ar fica bom'),
       NotifKind.dia => ('dia', 'Resumo do dia e Clube H2O', 'Resumo da manhã, pico de calor, fim de tarde e Clube H2O'),
+      NotifKind.tempo => ('previsao', 'Chuva, temporal e sol', 'Avisos com antecedência de alagamento, temporal, chuva forte, calor e sol'),
     };
     return NotificationDetails(
       android: AndroidNotificationDetails(

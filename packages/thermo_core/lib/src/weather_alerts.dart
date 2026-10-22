@@ -3,15 +3,22 @@ import 'models.dart';
 
 /// Avisos de previsão do tempo, do mais grave para o mais leve.
 enum WeatherAlertKind {
-  alagamento('Risco de alagamento'),
-  tempestade('Temporal com raios'),
-  chuvaForte('Chuva forte'),
-  calorExtremo('Calor extremo'),
-  chuva('Vai chover'),
-  solForte('Sol muito forte');
+  alagamento('Risco de alagamento', Duration(hours: 3), urgent: true),
+  tempestade('Temporal com raios', Duration(hours: 2), urgent: true),
+  chuvaForte('Chuva forte', Duration(hours: 2)),
+  calorExtremo('Calor extremo', Duration(hours: 2)),
+  chuva('Vai chover', Duration(hours: 1)),
+  solForte('Sol muito forte', Duration(hours: 1));
 
-  const WeatherAlertKind(this.title);
+  const WeatherAlertKind(this.title, this.lead, {this.urgent = false});
   final String title;
+
+  /// Antecedência da notificação: tempo para se preparar (sair antes, levar
+  /// guarda-chuva, mudar o trajeto, tirar o carro da rua baixa).
+  final Duration lead;
+
+  /// Risco à vida: toca mesmo à noite e também abre um pop-up no app.
+  final bool urgent;
 
   bool get isRain => this == alagamento || this == tempestade || this == chuvaForte || this == chuva;
 }
@@ -121,5 +128,60 @@ List<WeatherAlert> forecastAlerts(List<HourlyPoint> hourly, {required DateTime n
   }
 
   out.sort((a, b) => a.kind.index.compareTo(b.kind.index));
+  return out;
+}
+
+/// Notificação programada para um aviso: [notifyAt] já descontada a antecedência.
+class WeatherNotice {
+  const WeatherNotice(this.alert, this.notifyAt);
+  final WeatherAlert alert;
+  final DateTime notifyAt;
+
+  WeatherAlertKind get kind => alert.kind;
+
+  /// Identifica o mesmo evento entre atualizações da previsão (janela de 3 h),
+  /// para não avisar duas vezes se a hora prevista mudar um pouco.
+  String get key => '${kind.name}@${alert.at.year}-${alert.at.month}-${alert.at.day}-${alert.at.hour ~/ 3}';
+
+  String get title => '${kind.title} ${_hourLabel(alert.at, notifyAt)}';
+
+  String get body {
+    final ahead = alert.at.difference(notifyAt);
+    final lead = ahead.inMinutes >= 90
+        ? 'Daqui a cerca de ${(ahead.inMinutes / 60).round()} horas. '
+        : ahead.inMinutes >= 20
+            ? 'Daqui a cerca de ${ahead.inMinutes ~/ 10 * 10} minutos. '
+            : '';
+    // A mensagem foi escrita com o "agora" do cálculo; vale o dia de quando toca.
+    final h = alert.at.hour;
+    final message = alert.at.day == notifyAt.day
+        ? alert.message.replaceFirst('amanhã às ${h}h', 'às ${h}h')
+        : alert.message.replaceFirst(RegExp('(?<!amanhã )às ${h}h'), 'amanhã às ${h}h');
+    return '$lead$message';
+  }
+}
+
+String _hourLabel(DateTime at, DateTime from) => '${at.day == from.day ? 'às' : 'amanhã às'} ${at.hour}h';
+
+/// Horário de silêncio: avisos comuns não tocam das 22h às 6h.
+bool _quiet(DateTime t) => t.hour >= 22 || t.hour < 6;
+
+/// Notificações das próximas [hours] horas, cada uma com antecedência para a
+/// pessoa se preparar. Se a antecedência já passou, avisa agora (desde que
+/// falte pelo menos 20 minutos). Avisos comuns respeitam o silêncio da
+/// noite: vão para as 6h se o evento for de dia, ou não tocam se for de
+/// madrugada. Alagamento e temporal tocam a qualquer hora.
+List<WeatherNotice> planWeatherNotices(List<HourlyPoint> hourly, {required DateTime now, int hours = 24}) {
+  final out = <WeatherNotice>[];
+  for (final a in forecastAlerts(hourly, now: now, hours: hours)) {
+    if (a.at.difference(now).inMinutes < 20) continue;
+    var at = a.at.subtract(a.kind.lead);
+    if (!a.kind.urgent && _quiet(at)) {
+      if (_quiet(a.at)) continue;
+      at = DateTime(a.at.year, a.at.month, a.at.day, 6);
+    }
+    if (at.isBefore(now)) at = now;
+    out.add(WeatherNotice(a, at));
+  }
   return out;
 }

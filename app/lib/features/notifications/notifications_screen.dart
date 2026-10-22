@@ -82,6 +82,7 @@ class _Tile extends StatelessWidget {
       NotifKind.calor => (Icons.thermostat, Tokens.sol),
       NotifKind.agua => (Icons.water_drop_outlined, Tokens.rio),
       NotifKind.dia => (Icons.wb_twilight_outlined, Tokens.copa),
+      NotifKind.tempo => (Icons.thunderstorm_outlined, Tokens.rio),
     };
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),

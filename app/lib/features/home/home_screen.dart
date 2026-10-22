@@ -13,11 +13,10 @@ import '../adaptive/adaptive_controller.dart';
 import '../air/air_card.dart';
 import '../air/air_providers.dart';
 import '../climate/climate_providers.dart';
-import '../climate/weather_alert_popup.dart';
+import '../climate/weather_alerts.dart';
 import '../hydration/hydration_controller.dart';
 import '../safety/emergency_sheet.dart';
 import '../session/presentation/session_controller.dart';
-import 'briefing_provider.dart';
 import '../../core/widgets/thermo_loader.dart';
 import 'greeting.dart';
 import '../rewards/rewards_controller.dart';
@@ -48,7 +47,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
-            ref.invalidate(briefingProvider);
             await Future.wait([
               ref.read(climateProvider.notifier).refresh(),
               ref.read(airProvider.notifier).refresh(),
@@ -69,14 +67,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 if (c.stale)
                   const _Notice(icon: Icons.history, text: 'Sem conexão: mostrando os últimos dados salvos.'),
                 const _LocationNotice(),
+                // Do mais urgente para o menos: calor e ar agora, o que vem
+                // pela frente, o que fazer, quando sair, água e atalhos.
                 _Hero(climate: c.current),
                 const AirQualityCard(),
-                const _BriefingBlock(),
-                const _WindowsBlock(),
+                const _ForecastBlock(),
                 const _RecommendationsBlock(),
-                const _Shortcuts(),
+                const _WindowsBlock(),
                 const _HydrationBlock(),
-                const _ClubCard(),
+                const _Shortcuts(),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
                   child: OutlinedButton.icon(
@@ -320,56 +319,22 @@ class _Metric extends StatelessWidget {
       );
 }
 
-/// Resumo do assistente (calor, ar e o que fazer), logo abaixo dos números.
-class _BriefingBlock extends ConsumerWidget {
-  const _BriefingBlock();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final b = ref.watch(briefingProvider);
-    final text = b.whenOrNull(data: (x) => x.text);
-    if (text == null) return const SizedBox.shrink();
-    final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-      child: Material(
-        color: scheme.primaryContainer.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(Tokens.radiusBlock),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(Tokens.radiusBlock),
-          onTap: () => context.go('/assistente'),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.auto_awesome, color: scheme.primary),
-                const SizedBox(width: 12),
-                Expanded(child: Text(text, style: Theme.of(context).textTheme.bodyMedium)),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 /// Botões dedicados para o Clube H2O e as doações: só abrem com um toque.
 class _Shortcuts extends ConsumerWidget {
   const _Shortcuts();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final drops = ref.watch(rewardsProvider).valueOrNull?.balance;
     Widget label(String text) => FittedBox(fit: BoxFit.scaleDown, child: Text(text, maxLines: 1, softWrap: false));
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
       child: Row(children: [
         Expanded(
           child: _GradientOutline(
             child: FilledButton.tonalIcon(
               icon: const Icon(Icons.water_drop),
-              label: label('Clube H2O'),
+              label: label(drops == null ? 'Clube H2O' : 'Clube H2O · $drops gotas'),
               onPressed: () => context.push('/clube'),
             ),
           ),
@@ -414,54 +379,6 @@ class _GradientOutline extends StatelessWidget {
           ),
         ),
       );
-}
-
-/// Resumo do Clube H2O: saldo, sequência e o próximo desconto. Para entrar no
-/// Clube, use o botão dedicado em [_Shortcuts].
-class _ClubCard extends ConsumerWidget {
-  const _ClubCard();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final s = ref.watch(rewardsProvider).valueOrNull;
-    if (s == null) return const SizedBox.shrink();
-    final t = Theme.of(context).textTheme;
-    final ready = s.offers.where((o) => o['canRedeem'] == true).length;
-    final cheapest = s.offers
-        .where((o) => o['plusOnly'] != true)
-        .map((o) => o['cost'] as int)
-        .fold<int?>(null, (m, c) => m == null || c < m ? c : m);
-    final hint = ready > 0
-        ? '$ready ${ready == 1 ? 'desconto disponível' : 'descontos disponíveis'} para trocar'
-        : cheapest != null && cheapest > s.balance
-            ? 'Faltam ${cheapest - s.balance} gotas para o primeiro desconto'
-            : 'Ganhe gotas cuidando de você no calor';
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
-      child: Material(
-        color: Tokens.rio.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(Tokens.radiusBlock),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(children: [
-            const Icon(Icons.water_drop, color: Tokens.rio, size: 36),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Clube H2O · ${s.balance} gotas', style: t.titleMedium),
-                const SizedBox(height: 2),
-                Text(hint, style: t.bodyMedium),
-              ]),
-            ),
-            if (s.streakDays > 0) ...[
-              const Icon(Icons.local_fire_department, color: Tokens.sol),
-              Text('${s.streakDays}', style: t.titleMedium),
-            ],
-          ]),
-        ),
-      ),
-    );
-  }
 }
 
 class _HydrationBlock extends ConsumerWidget {
@@ -543,7 +460,6 @@ class _WindowsBlock extends ConsumerWidget {
     final air = ref.watch(airProvider).valueOrNull;
     final smoky = air != null && air.next(24).any((h) => h.level.isBad);
     if (w.best.isEmpty && safe.isEmpty) return const SizedBox.shrink();
-    final habitual = ref.watch(adaptiveProvider.select((p) => p.habitualHours));
     final t = Theme.of(context).textTheme;
     final sun = context.sunMode;
     return Column(
@@ -557,13 +473,13 @@ class _WindowsBlock extends ConsumerWidget {
             runSpacing: 8,
             children: [
               if (smoky)
-                for (final x in safe)
+                for (final x in safe.take(2))
                   Chip(
                     avatar: const Icon(Icons.verified_user_outlined, size: 18, color: Tokens.copa),
                     label: Text('${x.rangeLabel} · ${x.feelsC.round()}° · ar limpo'),
                   )
               else
-                for (final x in w.best)
+                for (final x in w.best.take(2))
                   Chip(
                     avatar: Icon(Icons.schedule, size: 18, color: Tokens.risk(x.level, sunMode: sun)),
                     label: Text('${x.rangeLabel}  ${x.avgHeatIndexC.round()}°'),
@@ -574,14 +490,13 @@ class _WindowsBlock extends ConsumerWidget {
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
           child: Text(
-            [
-              if (smoky && safe.isEmpty)
-                'Com a fumaça, não há horário de ar limpo nas próximas 24h: se sair, use máscara de proteção.',
-              if (smoky && safe.isNotEmpty) 'Nesses horários o ar fica limpo e o calor é suportável (Hora Segura).',
-              if (w.avoid != null) 'Evite sair entre ${w.avoid!.rangeLabel}, o período mais quente.',
-              if (habitual.isNotEmpty)
-                'Você costuma sair às ${habitual.map((h) => '${h}h').join(' e ')}: vamos avisar se esse horário ficar perigoso.',
-            ].join(' '),
+            smoky && safe.isEmpty
+                ? 'Com a fumaça, não há horário de ar limpo nas próximas 24h: se sair, use máscara de proteção.'
+                : w.avoid != null
+                    ? 'Evite sair entre ${w.avoid!.rangeLabel}, o período mais quente.'
+                    : smoky
+                        ? 'Nesses horários o ar fica limpo e o calor é suportável.'
+                        : '',
             style: t.bodyMedium,
           ),
         ),
@@ -590,8 +505,8 @@ class _WindowsBlock extends ConsumerWidget {
   }
 }
 
-/// "O que fazer agora": cartões coloridos lado a lado. Com fumaça, a
-/// recomendação do ar vem primeiro.
+/// "O que fazer agora": até 3 ações curtas, uma por linha. Com fumaça, a
+/// do ar vem primeiro.
 class _RecommendationsBlock extends ConsumerWidget {
   const _RecommendationsBlock();
 
@@ -609,18 +524,18 @@ class _RecommendationsBlock extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final recs = ref.watch(riskProvider)?.recommendations ?? const [];
     final air = ref.watch(airAdviceProvider);
-    final cards = <Widget>[
+    final rows = <Widget>[
       if (air != null && air.mask)
-        _RecCard(
+        _ActionRow(
           icon: Icons.masks_outlined,
           color: Tokens.air(air.level, sunMode: context.sunMode),
           title: air.title,
           message: air.message,
           onTap: () => showAirDetails(context),
         ),
-      ...recs.take(4).map((r) {
+      ...recs.map((r) {
         final (icon, color) = _style(r.kind);
-        return _RecCard(
+        return _ActionRow(
           icon: icon,
           color: color,
           title: r.title,
@@ -630,29 +545,19 @@ class _RecommendationsBlock extends ConsumerWidget {
               : null,
         );
       }),
-    ];
-    if (cards.isEmpty) return const SizedBox.shrink();
+    ].take(3).toList();
+    if (rows.isEmpty) return const SizedBox.shrink();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SectionTitle('O que fazer agora'),
-        SizedBox(
-          height: 168,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: cards.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 10),
-            itemBuilder: (_, i) => cards[i],
-          ),
-        ),
-      ],
+      children: [const SectionTitle('O que fazer agora'), ...rows],
     );
   }
 }
 
-class _RecCard extends StatelessWidget {
-  const _RecCard({required this.icon, required this.color, required this.title, required this.message, this.onTap});
+/// Uma linha de "O que fazer agora" ou de "Próximas horas": ícone, título e
+/// uma frase; toque para mais detalhes quando houver.
+class _ActionRow extends StatelessWidget {
+  const _ActionRow({required this.icon, required this.color, required this.title, required this.message, this.onTap});
   final IconData icon;
   final Color color;
   final String title;
@@ -662,39 +567,46 @@ class _RecCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    return SizedBox(
-      width: 240,
-      child: Material(
-        color: color.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(Tokens.radiusBlock),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(Tokens.radiusBlock),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(12)),
-                  child: Icon(icon, color: Colors.white, size: 20),
-                ),
-                const Spacer(),
-                if (onTap != null) Icon(Icons.arrow_forward, size: 18, color: color),
-              ]),
-              const SizedBox(height: 10),
-              Text(title,
-                  style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis),
-              const SizedBox(height: 4),
-              Expanded(
-                child: Text(message, style: t.bodySmall, maxLines: 4, overflow: TextOverflow.ellipsis),
-              ),
-            ]),
-          ),
-        ),
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+      leading: CircleAvatar(
+        backgroundColor: color.withValues(alpha: 0.14),
+        child: Icon(icon, color: color, size: 22),
       ),
+      title: Text(title, style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+      subtitle: Text(message, maxLines: 2, overflow: TextOverflow.ellipsis),
+      trailing: onTap == null ? null : const Icon(Icons.chevron_right),
+      onTap: onTap,
+    );
+  }
+}
+
+/// Próximas horas: chuva, temporal, alagamento, calor e sol que vêm por aí.
+/// Os mesmos avisos chegam como notificação antes da hora.
+class _ForecastBlock extends ConsumerWidget {
+  const _ForecastBlock();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final alerts = ref.watch(weatherAlertsProvider);
+    if (alerts.isEmpty) return const SizedBox.shrink();
+    final now = DateTime.now();
+    String when(DateTime t) => t.isBefore(now.add(const Duration(minutes: 30)))
+        ? 'agora'
+        : '${t.day == now.day ? 'às' : 'amanhã às'} ${t.hour}h';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionTitle('Próximas horas'),
+        for (final a in alerts.take(2))
+          _ActionRow(
+            icon: weatherAlertIcon(a.kind),
+            color: weatherAlertColor(a.kind),
+            title: '${a.title} ${when(a.at)}',
+            message: a.message,
+            onTap: () => showWeatherAlertDialog(context, a),
+          ),
+      ],
     );
   }
 }

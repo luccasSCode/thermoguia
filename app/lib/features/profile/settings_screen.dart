@@ -6,6 +6,7 @@ import '../../core/providers.dart';
 import '../../core/services/notification_inbox.dart';
 import '../../core/widgets/common.dart';
 import '../air/air_providers.dart';
+import '../climate/weather_alerts.dart';
 import '../notifications/engagement.dart';
 
 /// Configurações: o que o app pode avisar e o histórico de decisões.
@@ -24,6 +25,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     } else {
       await ref.read(notificationServiceProvider).setEnabled(k, on);
       if (k == NotifKind.dia) await ref.read(engagementSchedulerProvider)();
+      if (k == NotifKind.tempo) await ref.read(weatherNoticesSchedulerProvider)();
     }
     setState(() {});
   }
@@ -74,7 +76,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
             child: Text(
               'O resumo do dia nunca chega entre 19h30 e 6h30 (no máximo 4 por dia). Os alertas de fumaça '
-              'são urgentes e podem chegar das 6h às 22h. Som e vibração de cada tipo podem ser ajustados '
+              'são urgentes e podem chegar das 6h às 22h. Os avisos de chuva, calor e sol chegam de 1 a 3 horas '
+              'antes; só risco de alagamento e temporal tocam à noite. Som e vibração de cada tipo podem ser ajustados '
               'nos ajustes de notificação do celular.',
               style: t.bodySmall,
             ),
@@ -98,5 +101,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         NotifKind.calor => Icons.thermostat,
         NotifKind.ar => Icons.air,
         NotifKind.dia => Icons.wb_twilight_outlined,
+        NotifKind.tempo => Icons.thunderstorm_outlined,
       };
 }

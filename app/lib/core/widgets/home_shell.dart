@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/air/air_providers.dart';
 import '../../features/climate/climate_providers.dart';
+import '../../features/climate/weather_alerts.dart';
 import '../../features/notifications/engagement.dart';
 import '../../features/rewards/rewards_controller.dart';
 import '../providers.dart';
@@ -67,6 +68,8 @@ class _HomeShellState extends ConsumerState<HomeShell> with WidgetsBindingObserv
     // Previsão nova = textos novos nas notificações da semana.
     ref.listen(climateProvider.select((c) => c.valueOrNull?.fetchedAt), (_, __) {
       ref.read(engagementSchedulerProvider)();
+      // Chuva, temporal e sol: avisos refeitos com a antecedência de cada um.
+      ref.read(weatherNoticesSchedulerProvider)();
     });
     // Ar novo = alerta de fumaça (se mudou) e avisos programados refeitos.
     ref.listen(airProvider.select((a) => a.valueOrNull?.fetchedAt), (_, __) {
